@@ -15,9 +15,9 @@ def flatten_dataset(a):
 def run_random_forest(data, n_estimators=10, max_features='sqrt', do_predict_training=False):
     print("Loading data")
     (X_train, y_train), (X_test, y_test) = data
-    X_train = vectorify(X_train)
+    X_train = flatten_dataset(X_train)
     y_train = np.reshape(y_train, (y_train.size,))
-    X_test = vectorify(X_test)
+    X_test = flatten_dataset(X_test)
     y_test = np.reshape(y_test, (y_test.size,))
 
     print("Training")
@@ -43,4 +43,4 @@ def run_random_forest(data, n_estimators=10, max_features='sqrt', do_predict_tra
     return testAccuracy
 
 
-run_random_forest(cifar10.load_data(), n_estimators=10, do_predict_training=True)
+run_random_forest(mnist.load_data(), n_estimators=10, do_predict_training=True)

@@ -19,7 +19,7 @@ def describe_using_sift(data):
     sample_idx = []  # sample index associated with each keypoint
     sift = cv2.xfeatures2d.SIFT_create()
     count = 0
-    for idx, sample in enumerate(data[0:10000]):  # TODO use whole dataset
+    for idx, sample in enumerate(data):
         # TODO Seems to work on RGB, does it work as expected?
         key_points, descriptors = sift.detectAndCompute(sample, None)
         if len(key_points) > 0:
@@ -36,9 +36,9 @@ def describe_using_sift(data):
     return all_features, sample_idx
 
 
-def extract_histograms(samples, indices, labels):
-    described_samples = np.zeros((len(samples), 128))
-    for i in range(0, len(samples)):
+def extract_histograms(all_features, indices, labels, num_samples):
+    described_samples = np.zeros((num_samples, 128))
+    for i in range(0, len(all_features)):
         described_samples[indices[i], labels[i]] += 1
     linfnorm = np.linalg.norm(described_samples, axis=1, ord=np.inf)  # Get norm of each line
     described_samples.astype(np.float) / linfnorm[:, None]            # Normalize each line
@@ -69,7 +69,7 @@ def make_bags_of_keypoints(data):
 
     # 3. For each image, make a normalized histogram of those 128 visual words
     print("Make normalized histograms")
-    described_samples = extract_histograms(all_features, sample_idx, labels)
+    described_samples = extract_histograms(all_features, sample_idx, labels, len(data))
 
     return described_samples, centers
 
@@ -82,12 +82,17 @@ def convert_to_bags(data, words):
     tree = KDTree(words, leaf_size=2)
 
     # 3. Find closest word for each sample
-    dist, idx = tree.query(all_features)
-    # TODO WIP
-    pass
+    dist, labels = tree.query(all_features)
+    described_samples = extract_histograms(all_features, sample_idx, labels, len(data))
+
+    return described_samples
 
 
-def run_random_forest(n_estimators=10, max_features='sqrt', do_predict_training=False):
+def run_random_forest(data, n_estimators=10, max_features='sqrt', do_predict_training=False):
+    ((X_train, y_train),(X_test, y_test)) = data
+    y_train = np.reshape(y_train, (y_train.size,))
+    y_test = np.reshape(y_test, (y_test.size,))
+
     print("Training")
     rfClassifier = RandomForestClassifier(n_estimators=n_estimators, max_features=max_features, n_jobs=-1,
                                           verbose=1, random_state=1337)  # n_jobs=-1 => max num cores
@@ -112,9 +117,12 @@ def run_random_forest(n_estimators=10, max_features='sqrt', do_predict_training=
 
 
 print("Loading data")
-(X_train, y_train), (X_test, y_test) = cifar10.load_data()
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
 
-print("Describing data")
-make_bags_of_keypoints(X_train)
+print("Describing training data")
+X_train_described, sift_centers = make_bags_of_keypoints(X_train)
 
-# run_random_forest(mnist.load_data(), n_estimators=10, do_predict_training=True)
+print("Describing test data")
+X_test_described = convert_to_bags(X_test, sift_centers)
+
+run_random_forest(((X_train_described, y_train),(X_test_described, y_test)), n_estimators=10, do_predict_training=True)

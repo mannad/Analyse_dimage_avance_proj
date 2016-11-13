@@ -18,7 +18,7 @@ def describe_using_sift(data):
 
     all_features = []  # one item per image, item is of shape (num_keypoints_in_image, 128)
     sample_idx = []  # sample index associated with each keypoint
-    sift = cv2.xfeatures2d.SIFT_create(sigma=SIFT_SIGMA)
+    sift = cv2.xfeatures2d.SIFT_create(sigma=0.75)  # see sift_sigma.txt
     for idx, sample in enumerate(data):
         key_points, descriptors = sift.detectAndCompute(sample, None)
         if len(key_points) > 0:
@@ -116,27 +116,28 @@ def run_random_forest(data, n_estimators=10, max_features='sqrt', do_predict_tra
 
 # TODO À tester
 #   - Description des images test
-#   - Sift trop puissant pour taille des images? (overfitting)
+#   - x Sift trop puissant pour taille des images? (overfitting)
 #   - Assez de keypoints, assez de words par image?
+#   - Threshold SIFT
 
 print("Loading data")
 (X_train, y_train), (X_test, y_test) = mnist.load_data()
 
 results = []
-for sig in np.arange(0.65, 0.86, 0.05):
-    SIFT_SIGMA = sig
 
-    print("Describing training data")
-    X_train_described, sift_centers = make_bags_of_keypoints(X_train)
+print("Describing training data")
+X_train_described, sift_centers = make_bags_of_keypoints(X_train)
 
-    print("Describing test data")
-    X_test_described = convert_to_bags(X_test, sift_centers)
+print("Describing test data")
+X_test_described = convert_to_bags(X_test, sift_centers)
 
-    described_data = ((X_train_described, y_train), (X_test_described, y_test))
-    accu = run_random_forest(described_data, n_estimators=200, do_predict_training=True)
-    results.append((accu, sig))
+described_data = ((X_train_described, y_train), (X_test_described, y_test))
+accu = run_random_forest(described_data, n_estimators=200, do_predict_training=True)
 
-print()
-print("RESULTS:")
-for r in results:
-    print(r)
+if len(results) > 0:
+    print()
+    print("RESULTS:")
+    for r in results:
+        print(r)
+else:
+    print("Accuracy:", accu)

@@ -1,5 +1,6 @@
 from keras.datasets import mnist, cifar10
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KDTree
 import numpy as np
 import cv2.xfeatures2d
 
@@ -13,30 +14,80 @@ def flatten_dataset(a):
     return np.reshape(a, (X_shape[0], np.prod(X_shape[1:])))
 
 
-def make_bags_of_keypoints(data):
-    # 1. Detect SIFT features on all images and add them to one list
+def describe_using_sift(data):
     all_features = []  # one item per image, item is of shape (num_keypoints_in_image, 128)
+    sample_idx = []  # sample index associated with each keypoint
     sift = cv2.xfeatures2d.SIFT_create()
-    for sample in data:
-        # TODO May have to convert to grayscale
+    count = 0
+    for idx, sample in enumerate(data[0:10000]):  # TODO use whole dataset
+        # TODO Seems to work on RGB, does it work as expected?
         key_points, descriptors = sift.detectAndCompute(sample, None)
         if len(key_points) > 0:
             all_features.append(descriptors)
+            sample_idx += [idx] * len(key_points)
+
+        count += 1
+        if count % 1000 == 0:
+            print(count)
+
     all_features = np.concatenate(all_features)  # shape is (num_keypoints_total, 128)
+    sample_idx = np.asarray(sample_idx)
 
-    # 2. Do a K-Means (128) on that list of 32-D points
+    return all_features, sample_idx
+
+
+def extract_histograms(samples, indices, labels):
+    described_samples = np.zeros((len(samples), 128))
+    for i in range(0, len(samples)):
+        described_samples[indices[i], labels[i]] += 1
+    linfnorm = np.linalg.norm(described_samples, axis=1, ord=np.inf)  # Get norm of each line
+    described_samples.astype(np.float) / linfnorm[:, None]            # Normalize each line
+    return described_samples
+
+
+def make_bags_of_keypoints(data):
+    """Make a bags of keypoints representation using SIFT
+    :param data: array of samples
+    :return: tuple with (1) new representation of each sample (2) list of sift representation centers (words)
+    """
+
+    print("Total samples: {}".format(len(data)))
+
+    # 1. Detect SIFT features on all images and add them to one list
+    print("Detect SIFT keypoints and compute descriptors")
+    all_features, sample_idx = describe_using_sift(data)
+
+    # 2. Do a K-Means (128) on that list of 128-D points
+    print("Find descriptors clusters")
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+    err, labels, centers = cv2.kmeans(data=all_features,
+                                      K=128,
+                                      bestLabels=None,  # Always None in opencv-python
+                                      criteria=criteria,
+                                      attempts=3,
+                                      flags=cv2.KMEANS_RANDOM_CENTERS)
+
     # 3. For each image, make a normalized histogram of those 128 visual words
-    return None
+    print("Make normalized histograms")
+    described_samples = extract_histograms(all_features, sample_idx, labels)
+
+    return described_samples, centers
 
 
-def run_random_forest(data, n_estimators=10, max_features='sqrt', do_predict_training=False):
-    # print("Loading data")
-    # (X_train, y_train), (X_test, y_test) = data
-    # X_train = flatten_dataset(X_train)
-    # y_train = np.reshape(y_train, (y_train.size,))
-    # X_test = flatten_dataset(X_test)
-    # y_test = np.reshape(y_test, (y_test.size,))
+def convert_to_bags(data, words):
+    # 1. compute descriptors of each sample
+    all_features, sample_idx = describe_using_sift(data)
 
+    # 2. Insert all words in KDTree
+    tree = KDTree(words, leaf_size=2)
+
+    # 3. Find closest word for each sample
+    dist, idx = tree.query(all_features)
+    # TODO WIP
+    pass
+
+
+def run_random_forest(n_estimators=10, max_features='sqrt', do_predict_training=False):
     print("Training")
     rfClassifier = RandomForestClassifier(n_estimators=n_estimators, max_features=max_features, n_jobs=-1,
                                           verbose=1, random_state=1337)  # n_jobs=-1 => max num cores
@@ -61,9 +112,9 @@ def run_random_forest(data, n_estimators=10, max_features='sqrt', do_predict_tra
 
 
 print("Loading data")
-(X_train, y_train), (X_test, y_test) = mnist.load_data()
+(X_train, y_train), (X_test, y_test) = cifar10.load_data()
 
 print("Describing data")
 make_bags_of_keypoints(X_train)
 
-#run_random_forest(mnist.load_data(), n_estimators=10, do_predict_training=True)
+# run_random_forest(mnist.load_data(), n_estimators=10, do_predict_training=True)

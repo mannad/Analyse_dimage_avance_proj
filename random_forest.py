@@ -18,7 +18,7 @@ def describe_using_sift(data):
 
     all_features = []  # one item per image, item is of shape (num_keypoints_in_image, 128)
     sample_idx = []  # sample index associated with each keypoint
-    sift = cv2.xfeatures2d.SIFT_create()
+    sift = cv2.xfeatures2d.SIFT_create(sigma=0.5)
     count = 0
     for idx, sample in enumerate(data):
         key_points, descriptors = sift.detectAndCompute(sample, None)
@@ -41,8 +41,8 @@ def extract_histograms(all_features, indices, labels, num_samples):
     for i in range(0, len(all_features)):
         described_samples[indices[i], labels[i]] += 1
     linfnorm = np.linalg.norm(described_samples, axis=1, ord=np.inf)  # Get norm of each line
+    print("Num empty vectors:", (linfnorm == 0).sum())
     described_samples.astype(np.float) / linfnorm[:, None]  # Normalize each line
-    # TODO division par zero. Certaines images n'ont aucune feature?
     return described_samples
 
 
@@ -119,9 +119,9 @@ def run_random_forest(data, n_estimators=10, max_features='sqrt', do_predict_tra
 
 
 # TODO À tester
-#   - Certaines images ont 0 features? (histogramme zero partout)
 #   - Description des images test
 #   - Sift trop puissant pour taille des images? (overfitting)
+#   - Assez de keypoints, assez de words par image?
 
 print("Loading data")
 (X_train, y_train), (X_test, y_test) = mnist.load_data()
@@ -148,3 +148,11 @@ print(" Test accuracy:", accu[1])
 # Train accu: 0.98  Test accu: 0.77  Num bags: 512
 # Train accu: 0.98  Test accu: 0.78  Num bags: 1024
 # Train accu: 0.98  Test accu: 0.78  Num bags: 2048
+
+# Sigma 1.0  -- 55 empty
+# Train accuracy: 0.99965
+# Test accuracy: 0.7721
+
+# Sigma 0.5 -- 0 empty
+# Train accuracy: 0.999983333333
+#  Test accuracy: 0.8115

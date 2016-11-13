@@ -18,20 +18,16 @@ def describe_using_sift(data):
 
     all_features = []  # one item per image, item is of shape (num_keypoints_in_image, 128)
     sample_idx = []  # sample index associated with each keypoint
-    sift = cv2.xfeatures2d.SIFT_create(sigma=0.5)
-    count = 0
+    sift = cv2.xfeatures2d.SIFT_create(sigma=SIFT_SIGMA)
     for idx, sample in enumerate(data):
         key_points, descriptors = sift.detectAndCompute(sample, None)
         if len(key_points) > 0:
             all_features.append(descriptors)
             sample_idx += [idx] * len(key_points)
 
-        count += 1
-        if count % 1000 == 0:
-            print(count)
-
     all_features = np.concatenate(all_features)  # shape is (num_keypoints_total, 128)
     sample_idx = np.asarray(sample_idx)
+    print("Total features:", len(all_features))
 
     return all_features, sample_idx
 
@@ -126,33 +122,21 @@ def run_random_forest(data, n_estimators=10, max_features='sqrt', do_predict_tra
 print("Loading data")
 (X_train, y_train), (X_test, y_test) = mnist.load_data()
 
-print("Describing training data")
-X_train_described, sift_centers = make_bags_of_keypoints(X_train)
+results = []
+for sig in np.arange(0.65, 0.86, 0.05):
+    SIFT_SIGMA = sig
 
-print("Describing test data")
-X_test_described = convert_to_bags(X_test, sift_centers)
+    print("Describing training data")
+    X_train_described, sift_centers = make_bags_of_keypoints(X_train)
 
-described_data = ((X_train_described, y_train), (X_test_described, y_test))
-accu = run_random_forest(described_data, n_estimators=200, do_predict_training=True)
-print("Train accuracy:", accu[0])
-print(" Test accuracy:", accu[1])
+    print("Describing test data")
+    X_test_described = convert_to_bags(X_test, sift_centers)
 
-# MNIST
-# Accuracy:  (0.93825, 0.6112) - NUM_BAGS:  32
-# Accuracy:  (0.95801, 0.6874) - NUM_BAGS:  64
-# Accuracy:  (0.96766, 0.7347) - NUM_BAGS:  128
-# Accuracy:  (0.97486, 0.7698) - NUM_BAGS:  256
-# Accuracy:  (0.97899, 0.7845) - NUM_BAGS:  512
-# Accuracy:  (0.98281, 0.7903) - NUM_BAGS:  1024
-# Train accu: 0.97  Test accu: 0.76  Num bags: 256
-# Train accu: 0.98  Test accu: 0.77  Num bags: 512
-# Train accu: 0.98  Test accu: 0.78  Num bags: 1024
-# Train accu: 0.98  Test accu: 0.78  Num bags: 2048
+    described_data = ((X_train_described, y_train), (X_test_described, y_test))
+    accu = run_random_forest(described_data, n_estimators=200, do_predict_training=True)
+    results.append((accu, sig))
 
-# Sigma 1.0  -- 55 empty
-# Train accuracy: 0.99965
-# Test accuracy: 0.7721
-
-# Sigma 0.5 -- 0 empty
-# Train accuracy: 0.999983333333
-#  Test accuracy: 0.8115
+print()
+print("RESULTS:")
+for r in results:
+    print(r)

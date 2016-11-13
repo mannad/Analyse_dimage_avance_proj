@@ -1,8 +1,11 @@
 import sys
+import itertools
 from keras.datasets import mnist, cifar10, cifar100
 from sklearn.svm import LinearSVC
+# from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import confusion_matrix
 import numpy as np
-import cv2.xfeatures2d
+# import cv2.xfeatures2d
 import matplotlib.pyplot as plt
 
 dict_datasets = ['mnist', 'cifar10', 'cifar100']
@@ -40,9 +43,48 @@ def loading_data(name_dataset):
         return cifar100.load_data()
 
 
+def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        # print("Normalized confusion matrix")
+    # print(cm)
+
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    thresh = cm.max() / 2.0
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, '%.2f' % cm[i, j], horizontalalignment="center", color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+
+
+def compute_confusion_matrix(y_test, predicted_y):
+    # Compute confusion matrix
+    cnf_matrix = confusion_matrix(y_test, predicted_y)
+    np.set_printoptions(precision=2)
+    # Plot normalized confusion matrix
+    plt.figure()
+    plot_confusion_matrix(cnf_matrix, classes=range(1, 10), normalize=True,
+                          title='Normalized confusion matrix')
+    plt.show()
+
+
 def svm(dataset, c_min=1.0, c_max=10.0, step_c=1, min_it=100, max_it=1000, step_it=100):
     nb_it_make = 0
-    total_it = len(loss) + len(np.arange(c_min, c_max + step_c, step_c)) + len(range(min_it, max_it, step_it))
+    total_it = 1 + len(loss) * \
+                   len(np.arange(c_min, c_max + step_c, step_c)) * \
+                   len(range(min_it, max_it + step_it, step_it))
     print_progress(nb_it_make, total_it)
     # Get datasets mnist
     (X_train, y_train), (X_test, y_test) = dataset
@@ -77,6 +119,9 @@ def svm(dataset, c_min=1.0, c_max=10.0, step_c=1, min_it=100, max_it=1000, step_
                 # print('Test accuracy = ', '%.2f' % test_accuracy, '%')
                 # print('Scores', svm_lin_svc.score(X_test, y_test))
 
+                # Compute confusion matrix
+                compute_confusion_matrix(y_test, predicted_y)
+
                 results[loss_type].append({'nb_it': nb_it, 'c': c, 'loss': loss_type,
                                            'training_accuracy': training_accuracy, 'test_accuracy': test_accuracy})
 
@@ -84,8 +129,8 @@ def svm(dataset, c_min=1.0, c_max=10.0, step_c=1, min_it=100, max_it=1000, step_
                 print_progress(nb_it_make, total_it)
     return results
 
-res = svm(dataset=loading_data(dict_datasets[0]), c_min=1.0, c_max=5.0, min_it=1000, max_it=1000)
+res = svm(dataset=loading_data(dict_datasets[0]), c_min=1.0, c_max=1.0, min_it=100, max_it=100)
 for loss in res:
-    print('Result %s: \n' % loss)
+    print('Result %s:' % loss)
     for r in res[loss]:
         print(r)

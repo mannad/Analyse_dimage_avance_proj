@@ -1,26 +1,26 @@
-from keras.datasets import mnist, cifar10
+import cv2.xfeatures2d
+import numpy as np
+from keras.datasets import mnist
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KDTree
-import numpy as np
-import cv2.xfeatures2d
 
-
-def flatten_dataset(a):
-    """Flatten every sample in the dataset
-    :param a: ndarray of shape (num_samples , d1 , d2 , ... , dN)
-    :return: ndarray of shape  (num_samples , d1 * d2 * ... * dN)
-    """
-    X_shape = a.shape
-    return np.reshape(a, (X_shape[0], np.prod(X_shape[1:])))
+# Number of dimensions of the representation vectors (one vector per image in the dataset)
+NUM_BAGS = 256
 
 
 def describe_using_sift(data):
+    if len(data.shape) == 4:  # RGB images : (nb_samples, channel, rows, cols)
+        gray_data = []
+        for sample in data:
+            out = cv2.cvtColor(sample, cv2.COLOR_RGB2GRAY)
+            gray_data.append(out)
+        data = gray_data
+
     all_features = []  # one item per image, item is of shape (num_keypoints_in_image, 128)
     sample_idx = []  # sample index associated with each keypoint
     sift = cv2.xfeatures2d.SIFT_create()
     count = 0
     for idx, sample in enumerate(data):
-        # TODO Seems to work on RGB, does it work as expected?
         key_points, descriptors = sift.detectAndCompute(sample, None)
         if len(key_points) > 0:
             all_features.append(descriptors)
@@ -37,11 +37,12 @@ def describe_using_sift(data):
 
 
 def extract_histograms(all_features, indices, labels, num_samples):
-    described_samples = np.zeros((num_samples, 128))
+    described_samples = np.zeros((num_samples, NUM_BAGS))
     for i in range(0, len(all_features)):
         described_samples[indices[i], labels[i]] += 1
     linfnorm = np.linalg.norm(described_samples, axis=1, ord=np.inf)  # Get norm of each line
-    described_samples.astype(np.float) / linfnorm[:, None]            # Normalize each line
+    described_samples.astype(np.float) / linfnorm[:, None]  # Normalize each line
+    # TODO division par zero. Certaines images n'ont aucune feature?
     return described_samples
 
 
@@ -61,7 +62,7 @@ def make_bags_of_keypoints(data):
     print("Find descriptors clusters")
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
     err, labels, centers = cv2.kmeans(data=all_features,
-                                      K=128,
+                                      K=NUM_BAGS,
                                       bestLabels=None,  # Always None in opencv-python
                                       criteria=criteria,
                                       attempts=3,
@@ -89,18 +90,19 @@ def convert_to_bags(data, words):
 
 
 def run_random_forest(data, n_estimators=10, max_features='sqrt', do_predict_training=False):
-    ((X_train, y_train),(X_test, y_test)) = data
+    ((X_train, y_train), (X_test, y_test)) = data
     y_train = np.reshape(y_train, (y_train.size,))
     y_test = np.reshape(y_test, (y_test.size,))
 
     print("Training")
-    rfClassifier = RandomForestClassifier(n_estimators=n_estimators, max_features=max_features, n_jobs=-1,
-                                          verbose=1, random_state=1337)  # n_jobs=-1 => max num cores
-    rfClassifier.fit(X_train, y_train)
+    rf_classifier = RandomForestClassifier(n_estimators=n_estimators, max_features=max_features, n_jobs=-1,
+                                           verbose=1, random_state=1337)  # n_jobs=-1 => max num cores
+    rf_classifier.fit(X_train, y_train)
 
+    trainingAccuracy = 0
     if do_predict_training:
         print("Predicting on training")
-        predictedY = rfClassifier.predict(X_train)
+        predictedY = rf_classifier.predict(X_train)
         diff = predictedY - y_train
         trainingAccuracy = (diff == 0).sum() / np.float(len(y_train))
         print('training accuracy =', trainingAccuracy)
@@ -108,13 +110,18 @@ def run_random_forest(data, n_estimators=10, max_features='sqrt', do_predict_tra
         print("Not predicting on training, as requested")
 
     print("Predicting on test dataset")
-    predictedY = rfClassifier.predict(X_test)
+    predictedY = rf_classifier.predict(X_test)
     diff = predictedY - y_test
     testAccuracy = (diff == 0).sum() / np.float(len(y_test))
     print('test accuracy =', testAccuracy)
 
-    return testAccuracy
+    return trainingAccuracy, testAccuracy
 
+
+# TODO À tester
+#   - Certaines images ont 0 features? (histogramme zero partout)
+#   - Description des images test
+#   - Sift trop puissant pour taille des images? (overfitting)
 
 print("Loading data")
 (X_train, y_train), (X_test, y_test) = mnist.load_data()
@@ -125,4 +132,19 @@ X_train_described, sift_centers = make_bags_of_keypoints(X_train)
 print("Describing test data")
 X_test_described = convert_to_bags(X_test, sift_centers)
 
-run_random_forest(((X_train_described, y_train),(X_test_described, y_test)), n_estimators=10, do_predict_training=True)
+described_data = ((X_train_described, y_train), (X_test_described, y_test))
+accu = run_random_forest(described_data, n_estimators=200, do_predict_training=True)
+print("Train accuracy:", accu[0])
+print(" Test accuracy:", accu[1])
+
+# MNIST
+# Accuracy:  (0.93825, 0.6112) - NUM_BAGS:  32
+# Accuracy:  (0.95801, 0.6874) - NUM_BAGS:  64
+# Accuracy:  (0.96766, 0.7347) - NUM_BAGS:  128
+# Accuracy:  (0.97486, 0.7698) - NUM_BAGS:  256
+# Accuracy:  (0.97899, 0.7845) - NUM_BAGS:  512
+# Accuracy:  (0.98281, 0.7903) - NUM_BAGS:  1024
+# Train accu: 0.97  Test accu: 0.76  Num bags: 256
+# Train accu: 0.98  Test accu: 0.77  Num bags: 512
+# Train accu: 0.98  Test accu: 0.78  Num bags: 1024
+# Train accu: 0.98  Test accu: 0.78  Num bags: 2048

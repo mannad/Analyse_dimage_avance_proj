@@ -107,7 +107,7 @@ def compute_confusion_matrix(y_test, predicted_y):
     plt.show()
 
 
-def compute_plot_grid_search(a_grid_search, color_line_plot=None, x_min=1):
+def compute_plot_grid_search(a_grid_search, x_axis, color_line_plot=None):
     """
     Create plot grid search
     :param a_grid_search: dict category parameter of list each accuracy resulted of test
@@ -123,7 +123,7 @@ def compute_plot_grid_search(a_grid_search, color_line_plot=None, x_min=1):
     for idx, type_loss in enumerate(a_grid_search):
         plt.plot(a_grid_search[type_loss], color_line_plot[idx])
         list_handles.append(mpatches.Patch(color=color_line_plot[idx], label=type_loss))
-    plt.xlim(xmin=x_min, xmax=len(list(a_grid_search.values())[0]) - 1)  # set axis x within number accuracy
+    plt.xlim(xmin=x_axis[0], xmax=x_axis[len(x_axis) - 1])  # set axis x within number accuracy
     plt.xlabel('Value of C')
     plt.ylim(0, 100)
     plt.ylabel('Percent of accuracy')
@@ -200,16 +200,18 @@ def svm(dataset, c_min=1.0, c_max=10.0, c_step=1.0, min_it=100, max_it=1000, ste
 
                 nb_it_make += 1
                 print_progress(nb_it_make, total_it)
-    return results
+    return results, np.arange(c_min, c_max + c_step, c_step)
 
-res = svm(dataset=loading_data(dict_datasets[0]), c_min=1.0, c_max=5.0, c_step=0.5, min_it=500, max_it=500)
+res, x_axis = svm(dataset=loading_data(dict_datasets[0]), c_min=1.0, c_max=5.0, c_step=0.25, min_it=500, max_it=500)
 grid_search = {}
 grid_search[loss[0]] = [0]
 grid_search[loss[1]] = [0]
+file = open('result_grid_search_svm.txt', 'w')
 for loss_type in res:
     print('Result %s:' % loss_type)
     for r in res[loss_type]:
         print(r)
+        file.write(str(r) + '\n')
         grid_search[loss_type].append(r.get('accuracy', 0))
 
-compute_plot_grid_search(grid_search, ['r', 'b'])
+compute_plot_grid_search(grid_search, x_axis, ['r', 'b'])

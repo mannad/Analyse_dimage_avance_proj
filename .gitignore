@@ -1,2 +1,5 @@
 # PyCharm metadata
 .idea/
+
+*.bin
+~$*.xlsx

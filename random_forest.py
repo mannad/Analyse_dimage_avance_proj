@@ -1,11 +1,22 @@
 import cv2.xfeatures2d
 import numpy as np
-from keras.datasets import mnist
+import os
+import pickle
+from keras.datasets import mnist, cifar10
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KDTree
 
 # Number of dimensions of the representation vectors (one vector per image in the dataset)
 NUM_BAGS = 256
+
+
+def flatten_dataset(a):
+    """Flatten every sample in the dataset
+    :param a: ndarray of shape (num_samples , d1 , d2 , ... , dN)
+    :return: ndarray of shape  (num_samples , d1 * d2 * ... * dN)
+    """
+    X_shape = a.shape
+    return np.reshape(a, (X_shape[0], np.prod(X_shape[1:])))
 
 
 def describe_using_sift(data):
@@ -85,7 +96,7 @@ def convert_to_bags(data, words):
     return described_samples
 
 
-def run_random_forest(data, n_estimators=10, max_features='sqrt', do_predict_training=False):
+def run_random_forest(data, n_estimators, max_features, do_predict_training=False):
     ((X_train, y_train), (X_test, y_test)) = data
     y_train = np.reshape(y_train, (y_train.size,))
     y_test = np.reshape(y_test, (y_test.size,))
@@ -120,24 +131,43 @@ def run_random_forest(data, n_estimators=10, max_features='sqrt', do_predict_tra
 #   - Assez de keypoints, assez de words par image?
 #   - Threshold SIFT
 
+# Best MNIST-SIFT to date: 84%
+# Best MNIST-Raw  to date: 97%
+
 print("Loading data")
 (X_train, y_train), (X_test, y_test) = mnist.load_data()
 
-results = []
+if os.path.isfile("descr.bin"):
+    print("Loading described data")
+    with open("descr.bin", "rb") as file:
+        (X_train_described, X_test_described) = pickle.load(file)
+else:
+    print("Describing training data")
+    X_train_described, sift_centers = make_bags_of_keypoints(X_train)
 
-print("Describing training data")
-X_train_described, sift_centers = make_bags_of_keypoints(X_train)
+    print("Describing test data")
+    X_test_described = convert_to_bags(X_test, sift_centers)
 
-print("Describing test data")
-X_test_described = convert_to_bags(X_test, sift_centers)
+    print("Saving described data")
+    with open("descr.bin", "wb") as file:
+        pickle.dump((X_train_described, X_test_described), file, pickle.HIGHEST_PROTOCOL)
 
 described_data = ((X_train_described, y_train), (X_test_described, y_test))
-accu = run_random_forest(described_data, n_estimators=200, do_predict_training=True)
 
-if len(results) > 0:
-    print()
-    print("RESULTS:")
-    for r in results:
-        print(r)
-else:
-    print("Accuracy:", accu)
+# Perform grid search
+num_est_values = [50, 100, 200, 1000]
+max_features_values = [2, 4, 8, 16, 32]
+results = np.zeros((len(num_est_values), len(max_features_values), 2))
+
+for i, num_est in enumerate(num_est_values):
+    for j, max_features in enumerate(max_features_values):
+        accu = run_random_forest(described_data, n_estimators=num_est, max_features=max_features,
+                                 do_predict_training=True)
+        results[i, j] = accu
+
+with open("results.bin", "wb") as file:
+    pickle.dump(results, file, pickle.HIGHEST_PROTOCOL)
+
+np.savetxt("gridsearch_accuracy_train.csv", results[:, :, 0], delimiter=";")
+np.savetxt("gridsearch_accuracy_test.csv", results[:, :, 1], delimiter=";")
+print("See grid search results in csv files")

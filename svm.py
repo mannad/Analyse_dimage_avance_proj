@@ -6,14 +6,23 @@ from sklearn.svm import LinearSVC
 from sklearn.metrics import confusion_matrix
 import numpy as np
 # import cv2.xfeatures2d
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 
 dict_datasets = ['mnist', 'cifar10', 'cifar100']
 loss = ['hinge', 'squared_hinge']
+color_plt = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
 
 
-# Print iterations progress
 def print_progress(it, total):
+    """
+    Print iterations progress
+    :param it: no iteration
+    :type it: int
+    :param total: number iteration
+    :type total: int
+    :return: None
+    """
     percent = 100 * (it / total)
     sys.stdout.write('Progress: %.0f %% ' % percent)
     if it == total:
@@ -43,26 +52,38 @@ def loading_data(name_dataset):
         return cifar100.load_data()
 
 
-def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues):
+def plot_confusion_matrix(cnf_matrix, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues):
     """
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
+    :param cnf_matrix: confusion matrix to display
+    :type cnf_matrix: array, shape = [n_classes, n_classes]
+    :param classes: name of classes for label axis x
+    :type classes: list
+    :param normalize: if we want normalize matrix before to display
+    :type normalize: bool
+    :param title: title of plot to display
+    :type title: str
+    :param cmap: color of graduation bar, by default is Blue
+    :type cmap: matplotlib.cm
+    :return: None
     """
     if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        cnf_matrix = cnf_matrix.astype('float') / cnf_matrix.sum(axis=1)[:, np.newaxis]
         # print("Normalized confusion matrix")
     # print(cm)
 
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.imshow(cnf_matrix, interpolation='nearest', cmap=cmap)
     plt.title(title)
     plt.colorbar()
     tick_marks = np.arange(len(classes))
     plt.xticks(tick_marks, classes, rotation=45)
     plt.yticks(tick_marks, classes)
 
-    thresh = cm.max() / 2.0
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, '%.2f' % cm[i, j], horizontalalignment="center", color="white" if cm[i, j] > thresh else "black")
+    thresh = cnf_matrix.max() / 2.0
+    for i, j in itertools.product(range(cnf_matrix.shape[0]), range(cnf_matrix.shape[1])):
+        plt.text(j, i, '%.2f' % cnf_matrix[i, j], horizontalalignment="center",
+                 color="white" if cnf_matrix[i, j] > thresh else "black")
 
     plt.tight_layout()
     plt.ylabel('True label')
@@ -70,6 +91,12 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
 
 
 def compute_confusion_matrix(y_test, predicted_y):
+    """
+    Create confusion matrix and make plot
+    :param y_test: result test dataset
+    :param predicted_y: result predicted training
+    :return: None
+    """
     # Compute confusion matrix
     cnf_matrix = confusion_matrix(y_test, predicted_y)
     np.set_printoptions(precision=2)
@@ -80,10 +107,55 @@ def compute_confusion_matrix(y_test, predicted_y):
     plt.show()
 
 
-def svm(dataset, c_min=1.0, c_max=10.0, step_c=1, min_it=100, max_it=1000, step_it=100):
+def compute_plot_grid_search(a_grid_search, color_line_plot=None, x_min=1):
+    """
+    Create plot grid search
+    :param a_grid_search: dict category parameter of list each accuracy resulted of test
+    :type a_grid_search: dict[list]
+    :param color_line_plot: list of color of each category, must be same len of a_grid_search
+    :type color_line_plot: list[str]
+    :return:
+    """
+    if not color_line_plot or len(a_grid_search) != len(color_line_plot):
+        color_line_plot = color_plt[:len(a_grid_search)]
+    # Set params of plot
+    list_handles = []
+    for idx, type_loss in enumerate(a_grid_search):
+        plt.plot(a_grid_search[type_loss], color_line_plot[idx])
+        list_handles.append(mpatches.Patch(color=color_line_plot[idx], label=type_loss))
+    plt.xlim(xmin=x_min, xmax=len(list(a_grid_search.values())[0]) - 1)  # set axis x within number accuracy
+    plt.xlabel('Value of C')
+    plt.ylim(0, 100)
+    plt.ylabel('Percent of accuracy')
+    plt.grid(True)
+    # create legend guide
+    plt.legend(handles=list_handles)
+    plt.show()
+
+
+def svm(dataset, c_min=1.0, c_max=10.0, c_step=1.0, min_it=100, max_it=1000, step_it=100):
+    """
+
+    :param dataset: dataset to train and test
+    :type dataset: np.ndarray
+    :param c_min:
+    :type c_min: float
+    :param c_max:
+    :type c_max: float
+    :param c_step:
+    :type c_step: float
+    :param min_it:
+    :type min_it: int
+    :param max_it:
+    :type max_it: int
+    :param step_it:
+    :type step_it: int
+    :return: result for loss hinge and squared_hinge
+    :rtype: dict{list}
+    """
     nb_it_make = 0
     total_it = 1 + len(loss) * \
-                   len(np.arange(c_min, c_max + step_c, step_c)) * \
+                   len(np.arange(c_min, c_max + c_step, c_step)) * \
                    len(range(min_it, max_it + step_it, step_it))
     print_progress(nb_it_make, total_it)
     # Get datasets mnist
@@ -98,7 +170,7 @@ def svm(dataset, c_min=1.0, c_max=10.0, step_c=1, min_it=100, max_it=1000, step_
     for loss_type in loss:
         # print("#======= %s =======#" % loss_type)
         results[loss_type] = []
-        for c in np.arange(c_min, c_max + step_c, step_c):
+        for c in np.arange(c_min, c_max + c_step, c_step):
             for nb_it in range(min_it, max_it + step_it, step_it):
                 svm_lin_svc = LinearSVC(C=c, loss=loss_type, max_iter=nb_it)
 
@@ -120,17 +192,24 @@ def svm(dataset, c_min=1.0, c_max=10.0, step_c=1, min_it=100, max_it=1000, step_
                 # print('Scores', svm_lin_svc.score(X_test, y_test))
 
                 # Compute confusion matrix
-                compute_confusion_matrix(y_test, predicted_y)
+                # compute_confusion_matrix(y_test, predicted_y)
 
                 results[loss_type].append({'nb_it': nb_it, 'c': c, 'loss': loss_type,
-                                           'training_accuracy': training_accuracy, 'test_accuracy': test_accuracy})
+                                           'diff_accuracy': abs(test_accuracy - training_accuracy),
+                                           'accuracy': test_accuracy})
 
                 nb_it_make += 1
                 print_progress(nb_it_make, total_it)
     return results
 
-res = svm(dataset=loading_data(dict_datasets[0]), c_min=1.0, c_max=1.0, min_it=100, max_it=100)
-for loss in res:
-    print('Result %s:' % loss)
-    for r in res[loss]:
+res = svm(dataset=loading_data(dict_datasets[0]), c_min=1.0, c_max=5.0, c_step=0.5, min_it=500, max_it=500)
+grid_search = {}
+grid_search[loss[0]] = [0]
+grid_search[loss[1]] = [0]
+for loss_type in res:
+    print('Result %s:' % loss_type)
+    for r in res[loss_type]:
         print(r)
+        grid_search[loss_type].append(r.get('accuracy', 0))
+
+compute_plot_grid_search(grid_search, ['r', 'b'])

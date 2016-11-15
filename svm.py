@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 
-dict_datasets = ['mnist', 'cifar10', 'cifar100']
+list_datasets = ['mnist', 'cifar10', 'cifar100']
 loss = ['hinge', 'squared_hinge']
 color_plt = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
 
@@ -107,7 +107,7 @@ def compute_confusion_matrix(y_test, predicted_y):
     plt.show()
 
 
-def compute_plot_grid_search(a_grid_search, x_axis, color_line_plot=None):
+def compute_plot_grid_search(a_grid_search, x_axis, name_dataset=list_datasets[0], color_line_plot=None):
     """
     Create plot grid search
     :param a_grid_search: dict category parameter of list each accuracy resulted of test
@@ -130,33 +130,24 @@ def compute_plot_grid_search(a_grid_search, x_axis, color_line_plot=None):
     plt.grid(True)
     # create legend guide
     plt.legend(handles=list_handles)
+    plt.savefig('grid_search_svm_' + name_dataset + '.png')
     plt.show()
 
 
-def svm(dataset, c_min=1.0, c_max=10.0, c_step=1.0, min_it=100, max_it=1000, step_it=100):
+def svm(dataset, list_c=[1, 5, 10], max_it=500):
     """
 
     :param dataset: dataset to train and test
     :type dataset: np.ndarray
-    :param c_min:
-    :type c_min: float
-    :param c_max:
-    :type c_max: float
-    :param c_step:
-    :type c_step: float
-    :param min_it:
-    :type min_it: int
+    :param list_c:
+    :type list_c: list[int]
     :param max_it:
     :type max_it: int
-    :param step_it:
-    :type step_it: int
     :return: result for loss hinge and squared_hinge
     :rtype: dict{list}
     """
     nb_it_make = 0
-    total_it = 1 + len(loss) * \
-                   len(np.arange(c_min, c_max + c_step, c_step)) * \
-                   len(range(min_it, max_it + step_it, step_it))
+    total_it = 1 + len(loss) * len(list_c)
     print_progress(nb_it_make, total_it)
     # Get datasets mnist
     (X_train, y_train), (X_test, y_test) = dataset
@@ -170,43 +161,43 @@ def svm(dataset, c_min=1.0, c_max=10.0, c_step=1.0, min_it=100, max_it=1000, ste
     for loss_type in loss:
         # print("#======= %s =======#" % loss_type)
         results[loss_type] = []
-        for c in np.arange(c_min, c_max + c_step, c_step):
-            for nb_it in range(min_it, max_it + step_it, step_it):
-                svm_lin_svc = LinearSVC(C=c, loss=loss_type, max_iter=nb_it)
+        for c in list_c:
+            svm_lin_svc = LinearSVC(C=c, loss=loss_type, max_iter=max_it)
 
-                # print("======= Training =======")
-                svm_lin_svc.fit(X_train, y_train)
-                # print("Predicting on training")
-                predicted_y = svm_lin_svc.predict(X_train)
-                diff = predicted_y - y_train
-                training_accuracy = 100 * (diff == 0).sum() / np.float(len(y_train))
-                # print('Training accuracy = ', '%.2f' % training_accuracy, '%')
-                # print('Scores', svm_lin_svc.score(X_train, y_train))
+            # print("======= Training =======")
+            svm_lin_svc.fit(X_train, y_train)
+            # print("Predicting on training")
+            predicted_y = svm_lin_svc.predict(X_train)
+            diff = predicted_y - y_train
+            training_accuracy = 100 * (diff == 0).sum() / np.float(len(y_train))
+            # print('Training accuracy = ', '%.2f' % training_accuracy, '%')
+            # print('Scores', svm_lin_svc.score(X_train, y_train))
 
-                # print("======= Test =======")
-                # print("Predicting on test")
-                predicted_y = svm_lin_svc.predict(X_test)
-                diff = predicted_y - y_test
-                test_accuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
-                # print('Test accuracy = ', '%.2f' % test_accuracy, '%')
-                # print('Scores', svm_lin_svc.score(X_test, y_test))
+            # print("======= Test =======")
+            # print("Predicting on test")
+            predicted_y = svm_lin_svc.predict(X_test)
+            diff = predicted_y - y_test
+            test_accuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
+            # print('Test accuracy = ', '%.2f' % test_accuracy, '%')
+            # print('Scores', svm_lin_svc.score(X_test, y_test))
 
-                # Compute confusion matrix
-                # compute_confusion_matrix(y_test, predicted_y)
+            # Compute confusion matrix
+            # compute_confusion_matrix(y_test, predicted_y)
 
-                results[loss_type].append({'nb_it': nb_it, 'c': c, 'loss': loss_type,
-                                           'diff_accuracy': abs(test_accuracy - training_accuracy),
-                                           'accuracy': test_accuracy})
+            results[loss_type].append({'C': c, 'loss': loss_type,
+                                       'diff_accuracy': abs(test_accuracy - training_accuracy),
+                                       'accuracy': test_accuracy})
 
-                nb_it_make += 1
-                print_progress(nb_it_make, total_it)
-    return results, np.arange(c_min, c_max + c_step, c_step)
+            nb_it_make += 1
+            print_progress(nb_it_make, total_it)
+    return results
 
-res, x_axis = svm(dataset=loading_data(dict_datasets[0]), c_min=1.0, c_max=5.0, c_step=0.25, min_it=500, max_it=500)
+list_c = [1, 10, 30, 60, 100, 500, 1000, 2000]
+res = svm(dataset=loading_data(list_datasets[0]), list_c=list_c)
 grid_search = {}
 grid_search[loss[0]] = [0]
 grid_search[loss[1]] = [0]
-file = open('result_grid_search_svm.txt', 'w')
+file = open('result_grid_search_svm' + list_datasets[0] + '.txt', 'w')
 for loss_type in res:
     print('Result %s:' % loss_type)
     for r in res[loss_type]:
@@ -214,4 +205,4 @@ for loss_type in res:
         file.write(str(r) + '\n')
         grid_search[loss_type].append(r.get('accuracy', 0))
 
-compute_plot_grid_search(grid_search, x_axis, ['r', 'b'])
+compute_plot_grid_search(grid_search, list_c, list_datasets[0])

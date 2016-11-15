@@ -129,7 +129,7 @@ def compute_plot_grid_search(a_grid_search, x_axis, name_dataset=list_datasets[0
     plt.ylabel('Percent of accuracy')
     plt.grid(True)
     # create legend guide
-    plt.legend(handles=list_handles)
+    plt.legend(handles=list_handles, loc='best')
     plt.savefig('grid_search_svm_' + name_dataset + '.png')
     # plt.show()
 
@@ -193,15 +193,16 @@ def svm(dataset, list_c=[1, 5, 10], max_it=500):
     return results
 
 list_c = [0.05, 1, 2, 5, 10, 20, 30, 45, 60, 100, 300, 500, 1000, 2000, 5000]
-res = svm(dataset=loading_data(list_datasets[0]), list_c=list_c)
+res = svm(dataset=loading_data(list_datasets[0]), list_c=list_c, max_it=2000)
 grid_search = dict()
 grid_search[loss[0]] = [0]
 grid_search[loss[1]] = [0]
 file_res = open('result_accuracy_svm_' + list_datasets[0] + '.txt', 'w')
 file_gs = open('result_grid_search_svm_' + list_datasets[0] + '.txt', 'w')
 for loss_type in res:
-    file_gs.write('Result %s:' % loss_type)
-    print('Result %s: \n' % loss_type)
+    file_gs.write('Result %s: \n' % loss_type)
+    file_res.write('Result %s: \n' % loss_type)
+    print('Result %s:' % loss_type)
     for r in res[loss_type]:
         print(r)
         file_res.write(str(r) + '\n')

@@ -44,9 +44,9 @@ def set_datasets_in_1D(a_datasets):
 
 def loading_data(name_dataset):
     print("Loading data")
-    if name_dataset == dict_datasets[0]:
+    if name_dataset == list_datasets[0]:
         return mnist.load_data()
-    elif name_dataset == dict_datasets[1]:
+    elif name_dataset == list_datasets[1]:
         return cifar10.load_data()
     else:
         return cifar100.load_data()
@@ -123,7 +123,7 @@ def compute_plot_grid_search(a_grid_search, x_axis, name_dataset=list_datasets[0
     for idx, type_loss in enumerate(a_grid_search):
         plt.plot(a_grid_search[type_loss], color_line_plot[idx])
         list_handles.append(mpatches.Patch(color=color_line_plot[idx], label=type_loss))
-    plt.xlim(xmin=x_axis[0], xmax=x_axis[len(x_axis) - 1])  # set axis x within number accuracy
+    # plt.xlim(xmin=x_axis[0], xmax=x_axis[-1])  # set axis x within number accuracy
     plt.xlabel('Value of C')
     plt.ylim(0, 100)
     plt.ylabel('Percent of accuracy')
@@ -131,7 +131,7 @@ def compute_plot_grid_search(a_grid_search, x_axis, name_dataset=list_datasets[0
     # create legend guide
     plt.legend(handles=list_handles)
     plt.savefig('grid_search_svm_' + name_dataset + '.png')
-    plt.show()
+    # plt.show()
 
 
 def svm(dataset, list_c=[1, 5, 10], max_it=500):
@@ -192,17 +192,22 @@ def svm(dataset, list_c=[1, 5, 10], max_it=500):
             print_progress(nb_it_make, total_it)
     return results
 
-list_c = [1, 10, 30, 60, 100, 500, 1000, 2000]
+list_c = [0.05, 1, 2, 5, 10, 20, 30, 45, 60, 100, 300, 500, 1000, 2000, 5000]
 res = svm(dataset=loading_data(list_datasets[0]), list_c=list_c)
-grid_search = {}
+grid_search = dict()
 grid_search[loss[0]] = [0]
 grid_search[loss[1]] = [0]
-file = open('result_grid_search_svm' + list_datasets[0] + '.txt', 'w')
+file_res = open('result_accuracy_svm_' + list_datasets[0] + '.txt', 'w')
+file_gs = open('result_grid_search_svm_' + list_datasets[0] + '.txt', 'w')
 for loss_type in res:
-    print('Result %s:' % loss_type)
+    file_gs.write('Result %s:' % loss_type)
+    print('Result %s: \n' % loss_type)
     for r in res[loss_type]:
         print(r)
-        file.write(str(r) + '\n')
+        file_res.write(str(r) + '\n')
+        file_gs.write(str(r['accuracy']) + ' ' + str(r['diff_accuracy']) + '\n')
         grid_search[loss_type].append(r.get('accuracy', 0))
+    file_gs.write('\n')
+    file_res.write('\n')
 
 compute_plot_grid_search(grid_search, list_c, list_datasets[0])

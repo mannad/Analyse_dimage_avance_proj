@@ -4,3 +4,6 @@
 *.bin
 ~$*.xlsx
 *.pyc
+
+gridsearch_accuracy_train.csv
+gridsearch_accuracy_test.csv

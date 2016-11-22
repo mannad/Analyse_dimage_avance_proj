@@ -35,7 +35,7 @@ def create_bags_of_words(data, num_words=256, debug=False):
     return described_samples, centers
 
 
-def convert_to_bag(data, words, debug=False):
+def convert_to_bags(data, words, debug=False):
     """ Convert a sample into a bag of visual words using SIFT feature
     :param data: array of samples
     :param words: array of words to use

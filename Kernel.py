@@ -7,22 +7,24 @@ def vectorify(a):
     X_shape = a.shape
     return np.reshape(a, (X_shape[0], X_shape[1] * X_shape[2]))
 
+np.random.seed(159753)
+
 print("Loading data")
 (X_train, y_train), (X_test, y_test) = mnist.load_data()
 
 X_train = vectorify(X_train)
 X_test = vectorify(X_test)
 
-gammaRange = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0]
-slackRange = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0]
+gammaRange = [0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+slackRange = [0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0]
 
-f = open("KernelGridSearchResult.csv")
+f = open("KernelGridSearchResult.csv", 'w')
 for slack_idx, c in enumerate(slackRange):
-    f.write(c + ';')
+    f.write(str(c) + ';')
 f.write('\n')
 
 for gamma_idx, g in enumerate(gammaRange):
-    f.write(g + ';')
+    f.write(str(g) + ';')
     for slack_idx, c in enumerate(slackRange):
         print("Training : g:" + "%.2f" % g + " c:" + "%.2f" % c)
         kernelClassifier = SVC()
@@ -44,6 +46,6 @@ for gamma_idx, g in enumerate(gammaRange):
         testAccuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
         print('test accuracy = ', testAccuracy, '%')
 
-        f.write(trainingAccuracy + ';' + testAccuracy + ';')
+        f.write(str(trainingAccuracy) + ';' + str(testAccuracy) + ';')
     f.write('\n')
 f.close()

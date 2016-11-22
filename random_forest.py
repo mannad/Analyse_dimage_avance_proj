@@ -7,7 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KDTree
 
 # Number of dimensions of the representation vectors (one vector per image in the dataset)
-NUM_BAGS = 256
+NUM_BAGS = 6
 
 
 def flatten_dataset(a):
@@ -47,7 +47,7 @@ def extract_histograms(all_features, indices, labels, num_samples):
     described_samples = np.zeros((num_samples, NUM_BAGS))
     for i in range(0, len(all_features)):
         described_samples[indices[i], labels[i]] += 1
-    linfnorm = np.linalg.norm(described_samples, axis=1, ord=np.inf)  # Get norm of each line
+    linfnorm = np.linalg.norm(described_samples, axis=1, ord=1)  # Get norm of each line
     print("Num empty vectors:", (linfnorm == 0).sum())
     described_samples.astype(np.float) / linfnorm[:, None]  # Normalize each line
     return described_samples
@@ -137,7 +137,7 @@ def run_random_forest(data, n_estimators, max_features, do_predict_training=Fals
 print("Loading data")
 (X_train, y_train), (X_test, y_test) = mnist.load_data()
 
-if os.path.isfile("descr.bin"):
+if False:  # os.path.isfile("descr.bin"):
     print("Loading described data")
     with open("descr.bin", "rb") as file:
         (X_train_described, X_test_described) = pickle.load(file)
@@ -155,8 +155,8 @@ else:
 described_data = ((X_train_described, y_train), (X_test_described, y_test))
 
 # Perform grid search
-num_est_values = [50, 100, 200, 1000]
-max_features_values = [2, 4, 8, 16, 32]
+num_est_values = [10, 100, 1000]  # [50, 100, 200, 1000]
+max_features_values = [0.0005, 0.001, 0.01]  # [2, 4, 8, 16, 32]
 results = np.zeros((len(num_est_values), len(max_features_values), 2))
 
 for i, num_est in enumerate(num_est_values):

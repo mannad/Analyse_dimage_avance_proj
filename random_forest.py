@@ -45,7 +45,7 @@ def run_random_forest(data, n_estimators, max_features, do_predict_training=Fals
 # Best MNIST-Raw  to date: 97%
 
 print("Loading data")
-(X_train, y_train), (X_test, y_test) = mnist.load_data()
+(X_train, y_train), (X_test, y_test) = cifar10.load_data()
 
 if os.path.isfile("descr.bin"):
     print("Loading described data")

@@ -1,5 +1,6 @@
 import numpy as np
 import skimage.feature
+import skimage.color
 
 import Bag_of_Words
 
@@ -13,7 +14,10 @@ def describe_dataset(data, feature='hog'):
 
 
 def hog_job(data, i):
-    return skimage.feature.hog(data[i],
+    img = data[i]
+    if len(img.shape) == 3:
+        img = skimage.color.rgb2gray(img)
+    return skimage.feature.hog(img,
                                orientations=8,
                                pixels_per_cell=(data[0].shape[0] / 4, data[0].shape[1] / 4),
                                cells_per_block=(1, 1),

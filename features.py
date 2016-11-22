@@ -1,6 +1,7 @@
 import numpy as np
 import skimage.feature
-from joblib import Parallel, delayed
+
+import Bag_of_Words
 
 
 def describe_dataset(data, feature='hog'):
@@ -19,3 +20,9 @@ def hog_job(data, i):
                                visualise=False,
                                transform_sqrt=False,
                                feature_vector=True)
+
+
+def describe_using_bow(train_data, test_data, num_words):
+    described_train, words = Bag_of_Words.create_bags_of_words(train_data, num_words=num_words)
+    described_test = Bag_of_Words.convert_to_bags(test_data, words)
+    return described_train, described_test

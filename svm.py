@@ -11,39 +11,12 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import pickle
 
+from utils import flatten_dataset
 from Bag_of_Words import *
 
 list_datasets = ['mnist', 'cifar10', 'cifar100']
 loss = ['hinge', 'squared_hinge']
 color_plt = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
-
-
-def print_progress(it, total):
-    """
-    Print iterations progress
-    :param it: no iteration
-    :type it: int
-    :param total: number iteration
-    :type total: int
-    :return: None
-    """
-    percent = 100 * (it / total)
-    sys.stdout.write('Progress: %.0f %% ' % percent)
-    if it == total:
-        sys.stdout.write('\n')
-    sys.stdout.flush()
-
-
-def set_datasets_in_1D(a_datasets):
-    """
-    Flatten dataset like this (samples, feature) matrix
-    :param a_datasets: datasets loading
-    :type a_datasets: numpy.ndarray
-    :return: new shape
-    :rtype: numpy.ndarray
-    """
-    X_shape = a_datasets.shape
-    return np.reshape(a_datasets, (X_shape[0], X_shape[1] * X_shape[2]))
 
 
 def loading_data(name_dataset):
@@ -138,7 +111,7 @@ def compute_plot_grid_search(a_grid_search, x_axis, name_dataset=list_datasets[0
     # plt.show()
 
 
-def svm(dataset, c=1.0, max_it=500):
+def svm(dataset, c=1.0, max_it=1000):
     """
 
     :param dataset: dataset to train and test
@@ -150,16 +123,10 @@ def svm(dataset, c=1.0, max_it=500):
     :return: result for loss hinge and squared_hinge
     :rtype: dict{list}
     """
-    nb_it_make = 0
-    total_it = 1 + len(loss) * len(list_c)
-    print_progress(nb_it_make, total_it)
     # Get datasets mnist
     (X_train, y_train), (X_test, y_test) = dataset
-    X_train = set_datasets_in_1D(X_train)
-    X_test = set_datasets_in_1D(X_test)
-
-    nb_it_make += 1
-    print_progress(nb_it_make, total_it)
+    X_train = flatten_dataset(X_train)
+    X_test = flatten_dataset(X_test)
 
     results = {}
     for loss_type in loss:
@@ -184,13 +151,7 @@ def svm(dataset, c=1.0, max_it=500):
         # print('Test accuracy = ', '%.2f' % test_accuracy, '%')
         # print('Scores', svm_lin_svc.score(X_test, y_test))
 
-        # Compute confusion matrix
-        # compute_confusion_matrix(y_test, predicted_y)
-
         results[loss_type].append({'C': c, 'train_accuracy': training_accuracy, 'test_accuracy': test_accuracy})
-
-        nb_it_make += 1
-        print_progress(nb_it_make, total_it)
     return results
 
 # Execute svm
@@ -216,26 +177,25 @@ if __name__ == '__main__':
 
     described_data = ((X_train_described, y_train), (X_test_described, y_test))
 
-    list_c = [0.01, 0.05, 0.1, 0.2, 0.45, 0.8, 1, 1.5, 2]
+    list_c = [0.0001, 0.00025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2, 0.45, 0.8, 1.0, 1.25, 1.5, 1.75, 2, 2.5, 3]
     res_grid = {loss[0]: [], loss[1]: []}
-    for idx_c, c in enumerate(list_c[0]):
+    for idx_c, c in enumerate(list_c):
         print('Training-Test c=%s' % str(c))
-        res = svm(dataset=described_data, c=c, max_it=5)
+        res = svm(dataset=described_data, c=c)
 
-        res_grid[loss[0]].append(res[loss[0]])  # hinge
-        res_grid[loss[1]].append(res[loss[1]])  # squared_hinge
+        res_grid[loss[0]].append(res[loss[0]][0])  # hinge
+        res_grid[loss[1]].append(res[loss[1]][0])  # squared_hinge
 
     # put result in csv
     list_val_name = ['C', 'train_accuracy', 'test_accuracy']
     res_file = open('svm_grid_search_accuracy.txt', 'w')
-    res_file.write(';' + ';'.join(str(c) + ';' for c in [' '] + list_c) + ';\n')
     for loss_type in res_grid:
-        res_file.write('Result %s:' % loss_type)
+        res_file.write('Result %s: \n' % loss_type)
         print('Result %s: \n' % loss_type)
         for r in res_grid[loss_type]:
             print(r)
             line = ''
             for v in list_val_name:
-                line += r[v] + ';'
+                line += str(r[v]) + ';'
             res_file.write(line + '\n')
         res_file.write('\n')

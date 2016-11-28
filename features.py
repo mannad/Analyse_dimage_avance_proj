@@ -5,21 +5,24 @@ import skimage.color
 import Bag_of_Words
 
 
-def describe_dataset(data, feature='hog'):
+def describe_dataset(data, feature='hog', params=None):
     if feature == 'hog':
-        result = [hog_job(data, i) for i in range(0, len(data))]
+        result = [hog_job(data, i, params) for i in range(0, len(data))]
         return np.vstack(result)
     else:
         raise ValueError("Feature is not implemented: " + feature)
 
 
-def hog_job(data, i):
+def hog_job(data, i, params=None):
+    if params is None:
+        params = {'blocks_per_dim': 2, 'orientations': 12}
+    b = params['blocks_per_dim']
     img = data[i]
     if len(img.shape) == 3:
         img = skimage.color.rgb2gray(img)
     return skimage.feature.hog(img,
-                               orientations=8,
-                               pixels_per_cell=(data[0].shape[0] / 4, data[0].shape[1] / 4),
+                               orientations=params['orientations'],
+                               pixels_per_cell=(data[0].shape[0] / b, data[0].shape[1] / b),
                                cells_per_block=(1, 1),
                                visualise=False,
                                transform_sqrt=False,

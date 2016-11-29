@@ -1,5 +1,4 @@
 import os
-import sys
 import itertools
 from keras.datasets import mnist, cifar10, cifar100
 from sklearn.svm import LinearSVC
@@ -12,10 +11,11 @@ import matplotlib.pyplot as plt
 import pickle
 
 from utils import flatten_dataset
-from Bag_of_Words import *
+from features import describe_dataset, describe_using_bow
 
 list_datasets = ['mnist', 'cifar10', 'cifar100']
-loss = ['hinge', 'squared_hinge']
+list_loss = ['hinge', 'squared_hinge']
+list_feature = ['raw_pixel', 'bow', 'hog']
 color_plt = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
 
 
@@ -129,7 +129,7 @@ def svm(dataset, c=1.0, max_it=1000):
     X_test = flatten_dataset(X_test)
 
     results = {}
-    for loss_type in loss:
+    for loss_type in list_loss:
         # print("#======= %s =======#" % loss_type)
         results[loss_type] = []
         svm_lin_svc = LinearSVC(C=c, loss=loss_type, max_iter=max_it)
@@ -155,47 +155,60 @@ def svm(dataset, c=1.0, max_it=1000):
     return results
 
 # Execute svm
+# type_feature = list_feature[2]
+list_feature = [list_feature[0], list_feature[2]]
 if __name__ == '__main__':
     name_dataset = list_datasets[0]
-    print('Loading data %s' % name_dataset)
-    (X_train, y_train), (X_test, y_test) = loading_data(name_dataset)
+    for type_feature in list_feature:
+        print('Loading data %s' % name_dataset)
+        if type_feature != list_feature[0]:
+            (X_train, y_train), (X_test, y_test) = loading_data(name_dataset)
+            file_bin = 'descr_' + type_feature + '_' + name_dataset + '.bin'
+            if os.path.isfile(file_bin):
+                print('Loading described data')
+                with open(file_bin, 'rb') as file:
+                    (X_train_described, X_test_described) = pickle.load(file)
+            elif type_feature == list_feature[1]:
+                X_train_described, X_test_described = describe_using_bow(X_train, X_test, 256)
+                print('Saving described data')
+                with open(file_bin, 'wb') as file:
+                    pickle.dump((X_train_described, X_test_described), file, pickle.HIGHEST_PROTOCOL)
+            elif type_feature == list_feature[2]:
+                print('feature hog')
+                X_train_described = describe_dataset(X_train, type_feature)
+                X_test_described = describe_dataset(X_test, type_feature)
+            else:
+                raise ValueError("Feature is not implemented: " + type_feature)
+            if type_feature == list_feature[1]:
+                list_c = [0.0001, 0.00025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2, 0.45, 0.8, 1.0, 1.25, 1.5, 1.75,
+                          2, 2.5, 3]
+            else:
+                list_c = [0.1, 0.2, 0.45, 0.8, 1.0, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8, 9, 10, 15,
+                          20, 30, 45]
+            described_data = ((X_train_described, y_train), (X_test_described, y_test))
+        else:
+            described_data = loading_data(name_dataset)
+            list_c = [0.000001, 0.000001, 0.00001, 0.0001, 0.00025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2, 0.45,
+                      0.8, 1.0, 1.25, 1.5, 1.75, 2]
 
-    if os.path.isfile('descr_' + name_dataset + '.bin'):
-        print('Loading described data')
-        with open('descr_' + name_dataset + '.bin', 'rb') as file:
-            (X_train_described, X_test_described) = pickle.load(file)
-    else:
-        print('Describing training data')
-        X_train_described, sift_centers = create_bags_of_words(X_train, debug=True)
+        res_grid = {list_loss[0]: [], list_loss[1]: []}
+        for idx_c, c in enumerate(list_c):
+            print('Training-Test c=%s' % str(c))
+            res = svm(dataset=described_data, c=c)
 
-        print('Describing test data')
-        X_test_described = convert_to_bags(X_test, sift_centers)
+            res_grid[list_loss[0]].append(res[list_loss[0]][0])  # hinge
+            res_grid[list_loss[1]].append(res[list_loss[1]][0])  # squared_hinge
 
-        print('Saving described data')
-        with open('descr_' + name_dataset + '.bin', 'wb') as file:
-            pickle.dump((X_train_described, X_test_described), file, pickle.HIGHEST_PROTOCOL)
-
-    described_data = ((X_train_described, y_train), (X_test_described, y_test))
-
-    list_c = [0.0001, 0.00025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2, 0.45, 0.8, 1.0, 1.25, 1.5, 1.75, 2, 2.5, 3]
-    res_grid = {loss[0]: [], loss[1]: []}
-    for idx_c, c in enumerate(list_c):
-        print('Training-Test c=%s' % str(c))
-        res = svm(dataset=described_data, c=c)
-
-        res_grid[loss[0]].append(res[loss[0]][0])  # hinge
-        res_grid[loss[1]].append(res[loss[1]][0])  # squared_hinge
-
-    # put result in csv
-    list_val_name = ['C', 'train_accuracy', 'test_accuracy']
-    res_file = open('svm_grid_search_accuracy.txt', 'w')
-    for loss_type in res_grid:
-        res_file.write('Result %s: \n' % loss_type)
-        print('Result %s: \n' % loss_type)
-        for r in res_grid[loss_type]:
-            print(r)
-            line = ''
-            for v in list_val_name:
-                line += str(r[v]) + ';'
-            res_file.write(line + '\n')
-        res_file.write('\n')
+        # put result in csv
+        list_val_name = ['C', 'train_accuracy', 'test_accuracy']
+        res_file = open('svm_grid_search_accuracy_' + type_feature + '.txt', 'w')
+        for loss_type in res_grid:
+            res_file.write('Result %s: \n' % loss_type)
+            print('Result %s: \n' % loss_type)
+            for r in res_grid[loss_type]:
+                print(r)
+                line = ''
+                for v in list_val_name:
+                    line += str(r[v]) + ';'
+                res_file.write(line + '\n')
+            res_file.write('\n')

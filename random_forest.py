@@ -53,7 +53,7 @@ print("Loading data")
 (X_train, y_train), (X_test, y_test) = cifar10.load_data()
 
 feature_type = "downs_hog"
-feature_params = {'blocks_per_dim': 2, 'orientations': 4, 'downsample_factor': 8}  # 16 + 3 * 16
+feature_params = {'blocks_per_dim': 4, 'orientations': 6, 'downsample_factor': 8}
 
 if os.path.isfile("descr.bin"):
     print("Loading described data")
@@ -71,14 +71,14 @@ else:
     with open("descr.bin", "wb") as file:
         pickle.dump((X_train_described, X_test_described), file, pickle.HIGHEST_PROTOCOL)
 
-assert X_train_described.shape[1] == 64
+assert X_train_described.shape[1] == 144
 
 described_data = ((X_train_described, y_train), (X_test_described, y_test))
 
 # Perform grid search
 # num_est_values = [500, 1000, 2000]  # [50, 100, 200, 1000]
 min_s_split_values = [16]
-max_features_values = [12]  # [2, 4, 8, 16, 32]   sqrt(128) = 11
+max_features_values = [16]
 results = np.zeros((len(min_s_split_values), len(max_features_values), 3))
 
 with open("cumulative_results.txt", "a") as file:

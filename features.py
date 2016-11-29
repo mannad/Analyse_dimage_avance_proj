@@ -17,8 +17,19 @@ def describe_dataset(data, feature='hog', params=None):
         for i in range(0, len(data)):
             a = downsample_job(data, i, f)
             b = hog_job(data, i, params)
-            ab = np.hstack((a, b))
-            result.append(ab)
+            combined = np.hstack((a, b))
+            result.append(combined)
+        # result = [np.hstack((downsample_job(data, i, f), hog_job(data, i, params))) for i in range(0, len(data))]
+        return np.vstack(result)
+    elif feature == 'hue_hog':
+        # Linearized downsampled 4x4 image concatenated with hog
+        f = params['downsample_factor']
+        result = []
+        for i in range(0, len(data)):
+            downs_hue = downsample_job(data, i, f)  # downscale and convert to luv
+            hogfeat = hog_job(data, i, params)
+            combined = np.hstack((downs_hue, hogfeat))  # Keep only the hue
+            result.append(combined)
         # result = [np.hstack((downsample_job(data, i, f), hog_job(data, i, params))) for i in range(0, len(data))]
         return np.vstack(result)
     else:
@@ -27,7 +38,8 @@ def describe_dataset(data, feature='hog', params=None):
 
 def downsample_job(data, i, factor):
     downscaled = skimage.transform.downscale_local_mean(data[i], (factor, factor, 1))
-    return np.reshape(downscaled, (np.prod(downscaled.shape),))
+    downscaled_luv = skimage.color.rgb2luv(downscaled)
+    return np.reshape(downscaled_luv, (np.prod(downscaled_luv.shape),))
 
 
 def hog_job(data, i, params=None):
@@ -42,7 +54,7 @@ def hog_job(data, i, params=None):
                                pixels_per_cell=(data[0].shape[0] / b, data[0].shape[1] / b),
                                cells_per_block=(1, 1),
                                visualise=False,
-                               transform_sqrt=True,
+                               transform_sqrt=False,
                                feature_vector=True)
 
 

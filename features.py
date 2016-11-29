@@ -1,6 +1,7 @@
 import numpy as np
 import skimage.feature
 import skimage.color
+import skimage.transform
 
 import Bag_of_Words
 
@@ -9,8 +10,24 @@ def describe_dataset(data, feature='hog', params=None):
     if feature == 'hog':
         result = [hog_job(data, i, params) for i in range(0, len(data))]
         return np.vstack(result)
+    elif feature == 'downs_hog':
+        # Linearized downsampled 4x4 image concatenated with hog
+        f = params['downsample_factor']
+        result = []
+        for i in range(0, len(data)):
+            a = downsample_job(data, i, f)
+            b = hog_job(data, i, params)
+            ab = np.hstack((a, b))
+            result.append(ab)
+        # result = [np.hstack((downsample_job(data, i, f), hog_job(data, i, params))) for i in range(0, len(data))]
+        return np.vstack(result)
     else:
         raise ValueError("Feature is not implemented: " + feature)
+
+
+def downsample_job(data, i, factor):
+    downscaled = skimage.transform.downscale_local_mean(data[i], (factor, factor, 1))
+    return np.reshape(downscaled, (np.prod(downscaled.shape),))
 
 
 def hog_job(data, i, params=None):
@@ -25,7 +42,7 @@ def hog_job(data, i, params=None):
                                pixels_per_cell=(data[0].shape[0] / b, data[0].shape[1] / b),
                                cells_per_block=(1, 1),
                                visualise=False,
-                               transform_sqrt=False,
+                               transform_sqrt=True,
                                feature_vector=True)
 
 

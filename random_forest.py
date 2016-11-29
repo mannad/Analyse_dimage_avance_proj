@@ -6,16 +6,18 @@ import time
 from keras.datasets import mnist, cifar10
 from sklearn.ensemble import RandomForestClassifier
 import features
+import utils
 
 
-def run_random_forest(data, n_estimators, max_features, do_predict_training=False):
+def run_random_forest(data, n_estimators, max_features, min_samples_split, do_predict_training=False):
     ((X_train, y_train), (X_test, y_test)) = data
     y_train = np.reshape(y_train, (y_train.size,))
     y_test = np.reshape(y_test, (y_test.size,))
 
     print("Training")
     rf_classifier = RandomForestClassifier(n_estimators=n_estimators, max_features=max_features, n_jobs=-1,
-                                           verbose=1, random_state=1337, oob_score=True)  # n_jobs=-1 => max num cores
+                                           verbose=1, random_state=1337, oob_score=True,
+                                           min_samples_split=min_samples_split)  # n_jobs=-1 => max num cores
     rf_classifier.fit(X_train, y_train)
     fit_oob_score = rf_classifier.oob_score_
 
@@ -50,46 +52,51 @@ def run_random_forest(data, n_estimators, max_features, do_predict_training=Fals
 print("Loading data")
 (X_train, y_train), (X_test, y_test) = cifar10.load_data()
 
-if os.path.isfile("descr.bin"):
-hog_params = {'blocks_per_dim': 8, 'orientations': 16}
+feature_type = "downs_hog"
+feature_params = {'blocks_per_dim': 2, 'orientations': 4, 'downsample_factor': 8}  # 16 + 3 * 16
 
+if os.path.isfile("descr.bin"):
     print("Loading described data")
     with open("descr.bin", "rb") as file:
         (X_train_described, X_test_described) = pickle.load(file)
 else:
     print("Describing training data")
-    X_train_described = features.describe_dataset(X_train, feature="hog", params=hog_params)
+    X_train_described = features.describe_dataset(X_train, feature=feature_type, params=feature_params)
     assert X_train_described.shape[0] == len(X_train)
 
     print("Describing test data")
-    X_test_described = features.describe_dataset(X_test, feature="hog", params=hog_params)
+    X_test_described = features.describe_dataset(X_test, feature=feature_type, params=feature_params)
 
     print("Saving described data")
     with open("descr.bin", "wb") as file:
         pickle.dump((X_train_described, X_test_described), file, pickle.HIGHEST_PROTOCOL)
 
+assert X_train_described.shape[1] == 64
+
 described_data = ((X_train_described, y_train), (X_test_described, y_test))
 
 # Perform grid search
-num_est_values = [200]  # [50, 100, 200, 1000]
-max_features_values = [0.01]  # [2, 4, 8, 16, 32]
-results = np.zeros((len(num_est_values), len(max_features_values), 3))
+# num_est_values = [500, 1000, 2000]  # [50, 100, 200, 1000]
+min_s_split_values = [16]
+max_features_values = [12]  # [2, 4, 8, 16, 32]   sqrt(128) = 11
+results = np.zeros((len(min_s_split_values), len(max_features_values), 3))
 
 with open("cumulative_results.txt", "a") as file:
     file.write("\n\nNew grid search ==== " + time.ctime() + "\n")
-    file.write("Hog params: " + str(hog_params) + "\n")
+    file.write("Hog params: " + str(feature_params) + "\n")
 
-for i, num_est in enumerate(num_est_values):
+#for i, num_est in enumerate(num_est_values):
+for i, min_s_split in enumerate(min_s_split_values):
     for j, max_features in enumerate(max_features_values):
-        accu = run_random_forest(described_data, n_estimators=num_est, max_features=max_features,
-                                 do_predict_training=True)
+        accu = run_random_forest(described_data, n_estimators=500, max_features=max_features,
+                                 min_samples_split=min_s_split, do_predict_training=True)
         results[i, j] = accu
         with open("cumulative_results.txt", "a") as file:
-            file.write("{:<4} {:<2} {:<.3f} {:<.3f} {:<.3f}\n".format(num_est, max_features, accu[0], accu[2], accu[1]))
+            file.write("{:<4} {:<2} {:<.3f} {:<.3f} {:<.3f}\n".format(min_s_split, max_features, accu[0], accu[2], accu[1]))
 
 with open("results.bin", "wb") as file:
     pickle.dump(results, file, pickle.HIGHEST_PROTOCOL)
 
-np.savetxt("gridsearch_accuracy_train.csv", results[:, :, 0], delimiter=";")
-np.savetxt("gridsearch_accuracy_test.csv", results[:, :, 1], delimiter=";")
+np.savetxt("gridsearch_accuracy_train.csv", results[:, :, 0], delimiter=",")
+np.savetxt("gridsearch_accuracy_test.csv", results[:, :, 1], delimiter=",")
 print("See grid search results in csv files")

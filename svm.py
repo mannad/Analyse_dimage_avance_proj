@@ -187,7 +187,12 @@ def processing_data(X_train, X_test, type_feature):
     :return: X_train and X_test data feature or same data and list of c depending type feature
     :rtype: array, array, list
     """
-    if type_feature != list_feature[0]:
+    if type_feature == list_feature[0]:
+		X_train_described = X_train
+        X_test_described = X_test
+        list_c = [0.0000001, 0.000001, 0.00001, 0.0001, 0.00025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2, 0.45,
+                  0.8, 1.0, 1.25, 1.5, 1.75, 2]
+	else:
         file_bin = 'descr_' + type_feature + '_' + name_dataset + '.bin'
         if os.path.isfile(file_bin):
             print('Loading described data')
@@ -212,16 +217,11 @@ def processing_data(X_train, X_test, type_feature):
             list_c = [0.0000001, 0.000001, 0.00001, 0.0001, 0.00025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2,
                       0.45, 0.8, 1.0, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8, 9, 10, 15,
                       20, 30, 45]
-    else:
-        X_train_described = X_train
-        X_test_described = X_test
-        list_c = [0.0000001, 0.000001, 0.00001, 0.0001, 0.00025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2, 0.45,
-                  0.8, 1.0, 1.25, 1.5, 1.75, 2]
+        
     return X_train_described, X_test_described, list_c
 
 # Execute svm
-# type_feature = list_feature[2]
-list_feature = [list_feature[2]]
+list_type_feature = [list_feature[2]]
 if __name__ == '__main__':
     name_dataset = list_datasets[0]
     print('Loading data %s' % name_dataset)
@@ -233,7 +233,7 @@ if __name__ == '__main__':
     X_train_valid = X_train[int(len(X_train)*0.7):]
     y_train_train = y_train[:int(len(y_train) * 0.7)]
     y_train_valid = y_train[int(len(y_train) * 0.7):]
-    for type_feature in list_feature:
+    for type_feature in list_type_feature:
         X_train_described, X_test_described, list_c = processing_data(X_train_train, X_train_valid, type_feature)
         described_data = ((X_train_described, y_train_train), (X_test_described, y_train_valid))
 

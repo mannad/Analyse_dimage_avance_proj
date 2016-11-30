@@ -50,7 +50,11 @@ def run_random_forest(data, n_estimators, max_features, min_samples_split, do_pr
 # Best MNIST-Raw  to date: 97%
 
 print("Loading data")
-(X_train, y_train), (X_test, y_test) = cifar10.load_data()
+(X_train_all, y_train_all), (X_test, y_test) = cifar10.load_data()
+X_train = X_train_all[0:40000]
+y_train = y_train_all[0:40000]
+X_valid = X_train_all[40000:50000]
+y_valid = y_train_all[40000:50000]
 
 feature_type = "downs_hog"
 feature_params = {'blocks_per_dim': 4, 'orientations': 6, 'downsample_factor': 8}
@@ -58,22 +62,22 @@ feature_params = {'blocks_per_dim': 4, 'orientations': 6, 'downsample_factor': 8
 if os.path.isfile("descr.bin"):
     print("Loading described data")
     with open("descr.bin", "rb") as file:
-        (X_train_described, X_test_described) = pickle.load(file)
+        (X_train_described, X_valid_described) = pickle.load(file)
 else:
     print("Describing training data")
     X_train_described = features.describe_dataset(X_train, feature=feature_type, params=feature_params)
     assert X_train_described.shape[0] == len(X_train)
 
     print("Describing test data")
-    X_test_described = features.describe_dataset(X_test, feature=feature_type, params=feature_params)
+    X_valid_described = features.describe_dataset(X_valid, feature=feature_type, params=feature_params)
 
     print("Saving described data")
     with open("descr.bin", "wb") as file:
-        pickle.dump((X_train_described, X_test_described), file, pickle.HIGHEST_PROTOCOL)
+        pickle.dump((X_train_described, X_valid_described), file, pickle.HIGHEST_PROTOCOL)
 
 assert X_train_described.shape[1] == 144
 
-described_data = ((X_train_described, y_train), (X_test_described, y_test))
+described_data = ((X_train_described, y_train), (X_valid_described, y_valid))
 
 # Perform grid search
 # num_est_values = [500, 1000, 2000]  # [50, 100, 200, 1000]

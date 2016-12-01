@@ -2,9 +2,10 @@ import cv2.xfeatures2d
 import numpy as np
 from sklearn.neighbors import KDTree
 from skimage.util.shape import view_as_blocks
+from skimage.color import rgb2gray
 
 
-def create_bags_of_words(data, num_words=256, debug=False):
+def create_bags_of_words(data, feature_type, num_words=256, debug=False):
     """ Make bags of visual words using SIFT feature
     :param data: array of samples
     :param num_words: the number of words to find
@@ -15,8 +16,12 @@ def create_bags_of_words(data, num_words=256, debug=False):
     print("Total samples: {}".format(len(data)))
 
     # 1. Detect SIFT features on all images and add them to one list
-    print("Detecting SIFT keypoints and computing descriptors...")
-    all_features, sample_idx = __describe_using_sift__(data, debug=debug)
+    if feature_type == "hog":
+        print("Extracting HOG features...")
+        all_features, sample_idx = __describe_using_hog__(data, orientations=8, blocks_per_dim=4)
+    elif feature_type == "sift":
+        print("Detecting SIFT keypoints and computing descriptors...")
+        all_features, sample_idx = __describe_using_sift__(data, debug=debug)
 
     # 2. Do a K-Means (128) on that list of 128-D points
     print("Finding descriptors clusters...")
@@ -88,26 +93,31 @@ def __describe_using_sift__(data, sigma=0.75, debug=False):
 
 
 def __describe_using_hog__(data, orientations=8, blocks_per_dim=4):
-    assert len(data.shape) == 3  # TODO rgb. For now (n, h, w)
+    # Convert to gray
+    if len(data.shape) == 4:
+        assert data.shape[-1] == 3
+        data_gray = rgb2gray(data)
+    else:
+        data_gray = data
 
     # Compute gradients for each image
-    gradients = np.gradient(data, axis=(1, 2))  # gives (n, h, w, 2)
+    gradients = np.gradient(data_gray, axis=(1, 2))  # gives (n, h, w, 2)
 
     # Compute angle of gradients
     grad_orient = np.arctan2(gradients[:, :, :, 0], gradients[:, :, :, 1])  # gives (n, h, w)
 
     # Split each image into (bpd * bpd) blocks, where bpd = blocks_per_dim
-    block_shape = (1, data.shape[1] / blocks_per_dim, data.shape[2] / blocks_per_dim)
+    block_shape = (1, data_gray.shape[1] / blocks_per_dim, data_gray.shape[2] / blocks_per_dim)
     block_size = block_shape[1] * block_shape[2]
     grad_orient_blocks = view_as_blocks(grad_orient, block_shape=block_shape)  # gives (n, bi, bj, bh, bw)
 
     # Get a matrix where each line is a flattened block (it contains blocks from all images)
     blocks_per_image = blocks_per_dim * blocks_per_dim
-    block_list = np.reshape(grad_orient_blocks, (data.shape[0] * blocks_per_image, block_size))
+    block_list = np.reshape(grad_orient_blocks, (data_gray.shape[0] * blocks_per_image, block_size))
 
     # Compute histograms, which are our features
     features = []
-    indices = np.repeat(np.arange(0, data.shape[0]), blocks_per_image)  # associate feature to image
+    indices = np.repeat(np.arange(0, data_gray.shape[0]), blocks_per_image)  # associate feature to image
     histogram_bins = np.linspace(-np.pi, np.pi, orientations + 1)  # ex.: 4 orientations: [-pi, -pi/2, 0, pi/2, pi]
     for block in block_list:
         feat = np.histogram(block, bins=histogram_bins, density=True)  # density=True means that the sum = 1

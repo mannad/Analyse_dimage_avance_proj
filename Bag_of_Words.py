@@ -1,6 +1,7 @@
 import cv2.xfeatures2d
 import numpy as np
 from sklearn.neighbors import KDTree
+from skimage.util.shape import view_as_blocks
 
 
 def create_bags_of_words(data, num_words=256, debug=False):
@@ -84,6 +85,35 @@ def __describe_using_sift__(data, sigma=0.75, debug=False):
         print("Total features:", len(all_features))
 
     return all_features, sample_idx
+
+
+def __describe_using_hog__(data, orientations=8, blocks_per_dim=4):
+    assert len(data.shape) == 3  # TODO rgb. For now (n, h, w)
+
+    # Compute gradients for each image
+    gradients = np.gradient(data, axis=(1, 2))  # gives (n, h, w, 2)
+
+    # Compute angle of gradients
+    grad_orient = np.arctan2(gradients[:, :, :, 0], gradients[:, :, :, 1])  # gives (n, h, w)
+
+    # Split each image into (bpd * bpd) blocks, where bpd = blocks_per_dim
+    block_shape = (1, data.shape[1] / blocks_per_dim, data.shape[2] / blocks_per_dim)
+    block_size = block_shape[1] * block_shape[2]
+    grad_orient_blocks = view_as_blocks(grad_orient, block_shape=block_shape)  # gives (n, bi, bj, bh, bw)
+
+    # Get a matrix where each line is a flattened block (it contains blocks from all images)
+    blocks_per_image = blocks_per_dim * blocks_per_dim
+    block_list = np.reshape(grad_orient_blocks, (data.shape[0] * blocks_per_image, block_size))
+
+    # Compute histograms, which are our features
+    features = []
+    indices = np.repeat(np.arange(0, data.shape[0]), blocks_per_image)  # associate feature to image
+    histogram_bins = np.linspace(-np.pi, np.pi, orientations + 1)  # ex.: 4 orientations: [-pi, -pi/2, 0, pi/2, pi]
+    for block in block_list:
+        feat = np.histogram(block, bins=histogram_bins, density=True)  # density=True means that the sum = 1
+        features.append(feat)
+
+    return features, indices
 
 
 def __extract_histograms__(all_features, indices, labels, num_samples, num_words, debug=False):

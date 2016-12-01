@@ -153,8 +153,10 @@ def svm(dataset, c=1.0, max_it=1000):
     """
     # Get datasets mnist
     (X_train, y_train), (X_test, y_test) = dataset
-    X_train = flatten_dataset(X_train).astype('float32') / 255
-    X_test = flatten_dataset(X_test).astype('float32') / 255
+    # X_train = flatten_dataset(X_train).astype('float32') / 255
+    # X_test = flatten_dataset(X_test).astype('float32') / 255
+    X_train = flatten_dataset(X_train)
+    X_test = flatten_dataset(X_test)
 
     results = {}
     for loss_type in list_loss:
@@ -188,11 +190,11 @@ def processing_data(X_train, X_test, type_feature):
     :rtype: array, array, list
     """
     if type_feature == list_feature[0]:
-		X_train_described = X_train
+        X_train_described = X_train
         X_test_described = X_test
         list_c = [0.0000001, 0.000001, 0.00001, 0.0001, 0.00025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2, 0.45,
                   0.8, 1.0, 1.25, 1.5, 1.75, 2]
-	else:
+    else:
         file_bin = 'descr_' + type_feature + '_' + name_dataset + '.bin'
         if os.path.isfile(file_bin):
             print('Loading described data')
@@ -212,72 +214,74 @@ def processing_data(X_train, X_test, type_feature):
 
         if type_feature == list_feature[1]:  # bow
             list_c = [0.0001, 0.00025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2, 0.45, 0.8, 1.0, 1.25, 1.5, 1.75,
-                      2, 2.5, 3]
+                      2, 2.5, 3, 4, 5]
         else:  # hog
-            list_c = [0.0000001, 0.000001, 0.00001, 0.0001, 0.00025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2,
-                      0.45, 0.8, 1.0, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8, 9, 10, 15,
-                      20, 30, 45]
-        
+            list_c = [0.0001, 0.001, 0.01, 0.1, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10, 15]
     return X_train_described, X_test_described, list_c
 
 # Execute svm
 list_type_feature = [list_feature[2]]
 if __name__ == '__main__':
-    name_dataset = list_datasets[0]
-    print('Loading data %s' % name_dataset)
-    (X_train, y_train), (X_test, y_test) = loading_data(name_dataset)
-    res_comupute_svm_file = open('svm_result.txt', 'r')
+    res_compute_svm_file = open('svm_result.txt', 'w')
+    for name_dataset in list_datasets[:1]:
+        print('======= Loading data %s =======' % name_dataset)
+        (X_train, y_train), (X_test, y_test) = loading_data(name_dataset)
+        res_compute_svm_file.write('============== %s ==============' % name_dataset)
 
-    print('Training')
-    X_train_train = X_train[:int(len(X_train)*0.7)]
-    X_train_valid = X_train[int(len(X_train)*0.7):]
-    y_train_train = y_train[:int(len(y_train) * 0.7)]
-    y_train_valid = y_train[int(len(y_train) * 0.7):]
-    for type_feature in list_type_feature:
-        X_train_described, X_test_described, list_c = processing_data(X_train_train, X_train_valid, type_feature)
-        described_data = ((X_train_described, y_train_train), (X_test_described, y_train_valid))
+        # X_train_train = X_train[:int(len(X_train)*0.7)]
+        # X_train_valid = X_train[int(len(X_train)*0.7):]
+        # y_train_train = y_train[:int(len(y_train) * 0.7)]
+        # y_train_valid = y_train[int(len(y_train) * 0.7):]
+        for type_feature in list_type_feature:
+            print('=== Feature %s ===' % type_feature)
+            print('=== Training ===')
+            # X_train_described, X_test_described, list_c = processing_data(X_train_train, X_train_valid, type_feature)
+            # described_data = ((X_train_described, y_train_train), (X_test_described, y_train_valid))
+            X_train_described, X_test_described, list_c = processing_data(X_train, X_test, type_feature)
+            described_data = ((X_train_described, y_train), (X_test_described, y_test))
 
-        res_grid = {list_loss[0]: [], list_loss[1]: []}
-        best_hyper_params = {'C': float('infinity'), 'accuracy': float('infinity'), 'loss': None}
-        for idx_c, c in enumerate(list_c):
-            print('Training c=%s' % str(c))
-            res = svm(dataset=described_data, c=c)
+            res_grid = {list_loss[0]: [], list_loss[1]: []}
+            best_hyper_params = {'C': 0.0, 'accuracy': 0.0, 'loss': None}
+            for idx_c, c in enumerate(list_c):
+                print('Training c=%s' % str(c))
+                res = svm(dataset=described_data, c=c)
 
-            for loss_type in list_loss:
-                res_grid[loss_type].append(res[loss_type][0])
-                if (best_hyper_params['accuracy'] > res[loss_type][0]['test_accuracy']) \
-                        and (res[loss_type][0]['test_accuracy'] - res[loss_type][0]['train_accuracy']) < 0.5:
-                    best_hyper_params['C'] = c
-                    best_hyper_params['accuracy'] = res[loss_type][0]['test_accuracy']
-                    best_hyper_params['loss'] = loss_type
+                for loss_type in list_loss:
+                    res_grid[loss_type].append(res[loss_type][0])
+                    if (best_hyper_params['accuracy'] < res[loss_type][0]['test_accuracy']) \
+                            and abs(res[loss_type][0]['train_accuracy'] - res[loss_type][0]['test_accuracy']) < 1.0:
+                        best_hyper_params['C'] = c
+                        best_hyper_params['accuracy'] = res[loss_type][0]['test_accuracy']
+                        best_hyper_params['loss'] = loss_type
 
-        # put result in csv
-        list_val_name = ['C', 'train_accuracy', 'test_accuracy']
-        res_file = open('svm_grid_search_accuracy_' + type_feature + '.txt', 'w')
-        for loss_type in res_grid:
-            res_file.write('Result %s: \n' % loss_type)
-            print('Result %s: \n' % loss_type)
-            for r in res_grid[loss_type]:
-                print(r)
-                line = ''
-                for v in list_val_name:
-                    line += str(r[v]) + ';'
-                res_file.write(line + '\n')
-            res_file.write('\n')
+            # put result in csv
+            list_val_name = ['C', 'train_accuracy', 'test_accuracy']
+            res_file = open('svm_grid_search_accuracy_' + type_feature + '_' + name_dataset + '.txt', 'w')
+            for loss_type in res_grid:
+                res_file.write('Result %s;Train;Test;Diff;\n' % loss_type)
+                print('Result %s: \n' % loss_type)
+                for r in res_grid[loss_type]:
+                    print(r)
+                    line = ''
+                    for v in list_val_name:
+                        line += str(r[v]) + ';'
+                    line += str(r[list_val_name[1]] - r[list_val_name[2]]) + ';'
+                    res_file.write(line + '\n')
+                res_file.write('\n')
 
-        print('Test c=%s accuracy_training=%s loss=%s'
-              % (str(best_hyper_params['C']), str(best_hyper_params['accuracy']), str(best_hyper_params['loss'])))
+            print('=== Test c=%s accuracy_training=%s loss=%s ==='
+                  % (str(best_hyper_params['C']), str(best_hyper_params['accuracy']), str(best_hyper_params['loss'])))
 
-        svm_lin_svc = LinearSVC(C=best_hyper_params['C'], loss=best_hyper_params['loss'])
-        predicted_y = svm_lin_svc.predict(X_test)
-        diff = predicted_y - y_test
-        training_accuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
-
-        # Compute confusion matrix
-        cnf_matrix = compute_confusion_matrix(y_test, predicted_y, type_feature)
-        res_comupute_svm_file.write('c=%s;accuracy_training=%s;loss=%s;matrix_confusion /n'
-                                    % (str(best_hyper_params['C']), str(best_hyper_params['accuracy']),
-                                       str(best_hyper_params['loss'])))
-        res_comupute_svm_file.write(str(cnf_matrix))
-        res_comupute_svm_file.write('\n')
-    res_comupute_svm_file.close()
+            # svm_lin_svc = LinearSVC(C=best_hyper_params['C'], loss=best_hyper_params['loss'])
+            # predicted_y = svm_lin_svc.predict(X_test)
+            # diff = predicted_y - y_test
+            # training_accuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
+            #
+            # # Compute confusion matrix
+            # cnf_matrix = compute_confusion_matrix(y_test, predicted_y, type_feature)
+            # res_compute_svm_file.write('c=%s;accuracy_training=%s;loss=%s;matrix_confusion /n'
+            #                             % (str(best_hyper_params['C']), str(best_hyper_params['accuracy']),
+            #                                str(best_hyper_params['loss'])))
+            # res_compute_svm_file.write(str(cnf_matrix))
+            # res_compute_svm_file.write('\n')
+    res_compute_svm_file.close()

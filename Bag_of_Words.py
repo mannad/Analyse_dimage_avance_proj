@@ -21,8 +21,12 @@ def create_bags_of_words(data, feature_type, feature_params=None, num_words=256,
         print("Extracting HOG features...")
         if feature_params is None:
             feature_params = {'orientations': 8, 'blocks_per_dim': 4}
-        all_features, sample_idx = __describe_using_hog_parallel__(data, orientations=feature_params['orientations'],
-                                                                   blocks_per_dim=feature_params['blocks_per_dim'])
+        blocks_per_dim = feature_params['blocks_per_dim']
+        all_features = __describe_using_hog_parallel__(data, orientations=feature_params['orientations'],
+                                                       blocks_per_dim=blocks_per_dim)
+        # Make a list which makes the association: feature_index -> sample_index
+        sample_idx = np.repeat(np.arange(0, data.shape[0]), blocks_per_dim * blocks_per_dim)
+
         print("Converting to float32...")
         all_features = all_features.astype(np.float32)
     elif feature_type == "sift":
@@ -141,8 +145,7 @@ def __describe_using_hog_parallel__(data, orientations, blocks_per_dim):
         delayed(__describe_using_hog__)(d, orientations, blocks_per_dim) for d in batches)
 
     all_features = np.vstack(features_batches)
-    indices = np.repeat(np.arange(0, data.shape[0]), blocks_per_dim * blocks_per_dim)
-    return all_features, indices
+    return all_features
 
 
 def __extract_histograms__(all_features, indices, labels, num_samples, num_words, debug=False):

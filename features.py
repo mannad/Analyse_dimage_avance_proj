@@ -32,6 +32,9 @@ def describe_dataset(data, feature='hog', params=None):
             result.append(combined)
         # result = [np.hstack((downsample_job(data, i, f), hog_job(data, i, params))) for i in range(0, len(data))]
         return np.vstack(result)
+    elif feature == 'hog-bow':
+        described, centers = Bag_of_Words.create_bags_of_words(data, "hog", params, num_words=params['num_words'])
+        return described
     else:
         raise ValueError("Feature is not implemented: " + feature)
 

@@ -4,6 +4,7 @@ import skimage.color
 import skimage.transform
 
 import Bag_of_Words
+import utils
 
 
 def describe_dataset(data, feature='hog', params=None):
@@ -35,6 +36,9 @@ def describe_dataset(data, feature='hog', params=None):
     elif feature == 'hog-bow':
         described, centers = Bag_of_Words.create_bags_of_words(data, "hog", params, num_words=params['num_words'])
         return described
+    elif feature == 'gray':
+        gray_data = skimage.color.rgb2gray(data)
+        return utils.flatten_dataset(gray_data)
     else:
         raise ValueError("Feature is not implemented: " + feature)
 

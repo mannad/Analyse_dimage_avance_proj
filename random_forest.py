@@ -51,16 +51,18 @@ def run_random_forest(data, n_estimators, max_features, min_samples_split, do_pr
 
 print("Loading data")
 (X_train_all, y_train_all), (X_test, y_test) = cifar10.load_data()
-N_TRAIN = 40000
+X_train_all = np.vstack((X_train_all, X_test))
+y_train_all = np.concatenate((y_train_all, y_test))
+N_TRAIN = 50000  # For this run, The training set is all training samples and the validation set is the test set.
 X_train = X_train_all[:N_TRAIN]
 y_train = y_train_all[:N_TRAIN]
 X_valid = X_train_all[N_TRAIN:]
 y_valid = y_train_all[N_TRAIN:]
 
-feature_type = "hog-bow"
-feature_params = {'num_words': 128, 'orientations': 8, 'blocks_per_dim': 4}
+feature_type = "gray"
+feature_params = {}  # 'num_words': 128, 'orientations': 8, 'blocks_per_dim': 4}
 
-if os.path.isfile("descr.bin"):
+if False:  # os.path.isfile("descr.bin"):
     print("Loading described data")
     with open("descr.bin", "rb") as file:
         (X_train_described, X_valid_described) = pickle.load(file)
@@ -82,8 +84,8 @@ described_data = ((X_train_described, y_train), (X_valid_described, y_valid))
 # described_data = ((utils.flatten_dataset(X_train), y_train), (utils.flatten_dataset(X_valid), y_valid))
 
 # Perform grid search
-min_s_split_values = [24, 28, 32, 40, 48]
-max_features_values = [4, 8]
+min_s_split_values = [4]
+max_features_values = [128]
 results = np.zeros((len(min_s_split_values), len(max_features_values), 3))
 
 with open("cumulative_results.txt", "a") as file:
@@ -92,7 +94,7 @@ with open("cumulative_results.txt", "a") as file:
 
 for i, min_s_split in enumerate(min_s_split_values):
     for j, max_features in enumerate(max_features_values):
-        accu = run_random_forest(described_data, n_estimators=300, max_features=max_features,
+        accu = run_random_forest(described_data, n_estimators=1000, max_features=max_features,
                                  min_samples_split=min_s_split, do_predict_training=True)
         results[i, j] = accu
         with open("cumulative_results.txt", "a") as file:

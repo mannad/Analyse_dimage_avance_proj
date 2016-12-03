@@ -5,6 +5,7 @@ import pickle
 import time
 from keras.datasets import mnist, cifar10
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import confusion_matrix
 import features
 import utils
 
@@ -36,6 +37,12 @@ def run_random_forest(data, n_estimators, max_features, min_samples_split, do_pr
     diff = predictedY - y_test
     testAccuracy = (diff == 0).sum() / np.float(len(y_test))
     print('test accuracy =', testAccuracy)
+
+    np.savetxt("predict_rf.csv", predictedY)
+    np.savetxt("accu.csv", np.array((trainingAccuracy, testAccuracy)))
+
+    confmat = confusion_matrix(y_test, predictedY)
+    np.savetxt("confusion_rf.csv", confmat)
 
     return trainingAccuracy, testAccuracy, fit_oob_score
 

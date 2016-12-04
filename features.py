@@ -1,6 +1,6 @@
 import numpy as np
-import skimage.feature
 import skimage.color
+import skimage.feature
 import skimage.transform
 
 import Bag_of_Words
@@ -39,14 +39,21 @@ def describe_dataset(data, feature='hog', params=None):
     elif feature == 'gray':
         gray_data = skimage.color.rgb2gray(data)
         return utils.flatten_dataset(gray_data)
+    elif feature == 'raw':
+        return utils.flatten_dataset(data)
     else:
         raise ValueError("Feature is not implemented: " + feature)
 
 
 def downsample_job(data, i, factor):
-    downscaled = skimage.transform.downscale_local_mean(data[i], (factor, factor, 1))
-    downscaled_luv = skimage.color.rgb2luv(downscaled)
-    return np.reshape(downscaled_luv, (np.prod(downscaled_luv.shape),))
+    if len(data.shape) == 4:
+        downscaled = skimage.transform.downscale_local_mean(data[i], (factor, factor, 1))
+        downscaled_with_color_space = skimage.color.rgb2luv(downscaled)
+    elif len(data.shape) == 3:
+        downscaled_with_color_space = skimage.transform.downscale_local_mean(data[i], (factor, factor))
+    else:
+        raise Exception("wtf dude")
+    return np.reshape(downscaled_with_color_space, (np.prod(downscaled_with_color_space.shape),))
 
 
 def hog_job(data, i, params=None):

@@ -87,7 +87,7 @@ def plot_confusion_matrix(cnf_matrix, classes, normalize=False, title='Confusion
     plt.xlabel('Predicted label')
 
 
-def compute_confusion_matrix(y_test, predicted_y, type_feature, show_plot=False):
+def compute_confusion_matrix(y_test, predicted_y, name_datasets, type_feature, show_plot=False):
     """
     Create confusion matrix and make plot to show (optional)
     :param y_test: result test dataset
@@ -102,9 +102,9 @@ def compute_confusion_matrix(y_test, predicted_y, type_feature, show_plot=False)
     # Plot normalized confusion matrix
     np.set_printoptions(precision=2)
     plt.figure()
-    plot_confusion_matrix(cnf_matrix, classes=list_class_label_tag[type_feature], normalize=True,
+    plot_confusion_matrix(cnf_matrix, classes=list_class_label_tag[name_datasets], normalize=True,
                           title='Normalized confusion matrix')
-    plt.savefig('cnf_matrix_svm_' + type_feature + '.png')
+    plt.savefig('cnf_matrix_svm_' + name_datasets + '_' + type_feature + '.png')
     if show_plot:
         plt.show()
     else:
@@ -177,7 +177,7 @@ def svm(dataset, c=1.0, max_it=1000):
     return results
 
 
-def processing_data(X_train, X_test, type_feature):
+def processing_data(X_train, X_test, type_feature, is_train=True):
     """
     Processing data depending of the type feature
     :param X_train: data for training
@@ -186,6 +186,8 @@ def processing_data(X_train, X_test, type_feature):
     :type X_test: array
     :param type_feature: name of type feature
     :type type_feature: str
+    :param is_train: if training, return list_c
+    :type is_train: bool
     :return: X_train and X_test data feature or same data and list of c depending type feature
     :rtype: array, array, list
     """
@@ -195,50 +197,62 @@ def processing_data(X_train, X_test, type_feature):
         list_c = [0.0000001, 0.000001, 0.00001, 0.0001, 0.00025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2, 0.45,
                   0.8, 1.0, 1.25, 1.5, 1.75, 2]
     else:
-        file_bin = 'descr_' + type_feature + '_' + name_dataset + '.bin'
+        if is_train:
+            file_bin = 'descr_' + type_feature + '_' + name_datasets + '_train.bin'
+        else:
+            file_bin = 'descr_' + type_feature + '_' + name_datasets + '.bin'
+
         if os.path.isfile(file_bin):
             print('Loading described data')
             with open(file_bin, 'rb') as file:
                 (X_train_described, X_test_described) = pickle.load(file)
-        elif type_feature == list_feature[1]:  # bow
-            X_train_described, X_test_described = describe_using_bow(X_train, X_test, 256)
+            file.close()
+        else:
+            print('Loading described data')
+            if type_feature == list_feature[1]:  # bow
+                X_train_described, X_test_described = describe_using_bow(X_train, X_test, 256)
+            elif type_feature == list_feature[2]:  # hog
+                print('feature hog')
+                X_train_described = describe_dataset(X_train, type_feature)
+                X_test_described = describe_dataset(X_test, type_feature)
+            else:
+                raise ValueError("Feature is not implemented: " + type_feature)
+
             print('Saving described data')
             with open(file_bin, 'wb') as file:
                 pickle.dump((X_train_described, X_test_described), file, pickle.HIGHEST_PROTOCOL)
-        elif type_feature == list_feature[2]:  # hog
-            print('feature hog')
-            X_train_described = describe_dataset(X_train, type_feature)
-            X_test_described = describe_dataset(X_test, type_feature)
-        else:
-            raise ValueError("Feature is not implemented: " + type_feature)
+            file.close()
 
         if type_feature == list_feature[1]:  # bow
             list_c = [0.0001, 0.00025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2, 0.45, 0.8, 1.0, 1.25, 1.5, 1.75,
                       2, 2.5, 3, 4, 5]
         else:  # hog
-            list_c = [0.0001, 0.001, 0.01, 0.1, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10, 15]
-    return X_train_described, X_test_described, list_c
+            list_c = [0.0001, 0.001, 0.01, 0.1, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10, 15, 20, 25]
+    if is_train:
+        return X_train_described, X_test_described, list_c
+    else:
+        return X_train_described, X_test_described
 
 # Execute svm
-list_type_feature = [list_feature[2]]
+list_type_feature = list_feature
 if __name__ == '__main__':
     res_compute_svm_file = open('svm_result.txt', 'w')
-    for name_dataset in list_datasets[:1]:
-        print('======= Loading data %s =======' % name_dataset)
-        (X_train, y_train), (X_test, y_test) = loading_data(name_dataset)
-        res_compute_svm_file.write('============== %s ==============' % name_dataset)
+    for name_datasets in list_datasets:
+        print('======= Loading data %s =======' % name_datasets)
+        (X_train, y_train), (X_test, y_test) = loading_data(name_datasets)
+        res_compute_svm_file.write('============== Datasets %s ==============\n' % name_datasets)
 
-        # X_train_train = X_train[:int(len(X_train)*0.7)]
-        # X_train_valid = X_train[int(len(X_train)*0.7):]
-        # y_train_train = y_train[:int(len(y_train) * 0.7)]
-        # y_train_valid = y_train[int(len(y_train) * 0.7):]
+        N_TRAIN = int(len(X_train)*0.7)
+        X_train_train = X_train[:N_TRAIN]
+        X_train_valid = X_train[N_TRAIN:]
+        y_train_train = y_train[:N_TRAIN]
+        y_train_valid = y_train[N_TRAIN:]
         for type_feature in list_type_feature:
             print('=== Feature %s ===' % type_feature)
+            res_compute_svm_file.write('===== Feature %s =====\n' % type_feature)
             print('=== Training ===')
-            # X_train_described, X_test_described, list_c = processing_data(X_train_train, X_train_valid, type_feature)
-            # described_data = ((X_train_described, y_train_train), (X_test_described, y_train_valid))
-            X_train_described, X_test_described, list_c = processing_data(X_train, X_test, type_feature)
-            described_data = ((X_train_described, y_train), (X_test_described, y_test))
+            X_train_described, X_test_described, list_c = processing_data(X_train_train, X_train_valid, type_feature)
+            described_data = ((X_train_described, y_train_train), (X_test_described, y_train_valid))
 
             res_grid = {list_loss[0]: [], list_loss[1]: []}
             best_hyper_params = {'C': 0.0, 'accuracy': 0.0, 'loss': None}
@@ -256,7 +270,7 @@ if __name__ == '__main__':
 
             # put result in csv
             list_val_name = ['C', 'train_accuracy', 'test_accuracy']
-            res_file = open('svm_grid_search_accuracy_' + type_feature + '_' + name_dataset + '.txt', 'w')
+            res_file = open('svm_grid_search_accuracy_' + type_feature + '_' + name_datasets + '.txt', 'w')
             for loss_type in res_grid:
                 res_file.write('Result %s;Train;Test;Diff;\n' % loss_type)
                 print('Result %s: \n' % loss_type)
@@ -269,19 +283,22 @@ if __name__ == '__main__':
                     res_file.write(line + '\n')
                 res_file.write('\n')
 
-            print('=== Test c=%s accuracy_training=%s loss=%s ==='
+            print('=== Test c=%s accuracy_training=%s loss=%s ===\n'
                   % (str(best_hyper_params['C']), str(best_hyper_params['accuracy']), str(best_hyper_params['loss'])))
+            X_train_described, X_test_described = processing_data(X_train, X_test, type_feature, False)
+            X_train_described = flatten_dataset(X_train_described)
+            X_test_described = flatten_dataset(X_test_described)
+            svm_lin_svc = LinearSVC(C=best_hyper_params['C'], loss=best_hyper_params['loss'])
+            svm_lin_svc.fit(X_train_described, y_train)
+            predicted_y = svm_lin_svc.predict(X_test_described)
+            diff = predicted_y - y_test
+            training_accuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
 
-            # svm_lin_svc = LinearSVC(C=best_hyper_params['C'], loss=best_hyper_params['loss'])
-            # predicted_y = svm_lin_svc.predict(X_test)
-            # diff = predicted_y - y_test
-            # training_accuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
-            #
-            # # Compute confusion matrix
-            # cnf_matrix = compute_confusion_matrix(y_test, predicted_y, type_feature)
-            # res_compute_svm_file.write('c=%s;accuracy_training=%s;loss=%s;matrix_confusion /n'
-            #                             % (str(best_hyper_params['C']), str(best_hyper_params['accuracy']),
-            #                                str(best_hyper_params['loss'])))
-            # res_compute_svm_file.write(str(cnf_matrix))
-            # res_compute_svm_file.write('\n')
+            # Compute confusion matrix
+            cnf_matrix = compute_confusion_matrix(y_test, predicted_y, name_datasets, type_feature)
+            res_compute_svm_file.write('c=%s;accuracy_training=%s;loss=%s\nmatrix_confusion\n'
+                                       % (str(best_hyper_params['C']), str(best_hyper_params['accuracy']),
+                                          str(best_hyper_params['loss'])))
+            res_compute_svm_file.write(str(cnf_matrix))
+            res_compute_svm_file.write('\n')
     res_compute_svm_file.close()

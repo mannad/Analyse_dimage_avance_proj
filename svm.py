@@ -87,13 +87,19 @@ def plot_confusion_matrix(cnf_matrix, classes, normalize=False, title='Confusion
     plt.xlabel('Predicted label')
 
 
-def compute_confusion_matrix(y_test, predicted_y, name_datasets, type_feature, show_plot=False):
+def compute_confusion_matrix(y_test, predicted_y, name_dataset, type_feature, show_plot=False):
     """
     Create confusion matrix and make plot to show (optional)
     :param y_test: result test dataset
     :type y_test: np.ndarray
     :param predicted_y: result predicted training
     :type predicted_y: np.ndarray
+    :param name_dataset: name data to extract
+    :type name_dataset: str
+    :param type_feature: name of type feature
+    :type type_feature: str
+    :param show_plot: if we want show plot cnf matrix, put to True
+    :type show_plot: bool
     :return: matrix of confusion
     :rtype: np.ndarray
     """
@@ -102,9 +108,9 @@ def compute_confusion_matrix(y_test, predicted_y, name_datasets, type_feature, s
     # Plot normalized confusion matrix
     np.set_printoptions(precision=2)
     plt.figure()
-    plot_confusion_matrix(cnf_matrix, classes=list_class_label_tag[name_datasets], normalize=True,
-                          title='Normalized confusion matrix')
-    plt.savefig('cnf_matrix_svm_' + name_datasets + '_' + type_feature + '.png')
+    plot_confusion_matrix(cnf_matrix, classes=list_class_label_tag[name_dataset], normalize=True,
+                          title='Normalized confusion matrix %s %s' % (name_dataset, type_feature))
+    plt.savefig('cnf_matrix_svm_' + name_dataset + '_' + type_feature + '.png')
     if show_plot:
         plt.show()
     else:
@@ -112,11 +118,15 @@ def compute_confusion_matrix(y_test, predicted_y, name_datasets, type_feature, s
     return cnf_matrix
 
 
-def compute_plot_grid_search(a_grid_search, x_axis, name_dataset=list_datasets[0], color_line_plot=None):
+def compute_plot_grid_search(a_grid_search, name_dataset, type_feature, color_line_plot=None):
     """
     Create plot grid search
     :param a_grid_search: dict category parameter of list each accuracy resulted of test
     :type a_grid_search: dict[list]
+    :param name_dataset: name data to extract
+    :type name_dataset: str
+    :param type_feature: name of type feature
+    :type type_feature: str
     :param color_line_plot: list of color of each category, must be same len of a_grid_search
     :type color_line_plot: list[str]
     :return: None
@@ -128,20 +138,20 @@ def compute_plot_grid_search(a_grid_search, x_axis, name_dataset=list_datasets[0
     for idx, type_loss in enumerate(a_grid_search):
         plt.plot(a_grid_search[type_loss], color_line_plot[idx])
         list_handles.append(mpatches.Patch(color=color_line_plot[idx], label=type_loss))
-    # plt.xlim(xmin=x_axis[0], xmax=x_axis[-1])  # set axis x within number accuracy
+
     plt.xlabel('Value of C')
     plt.ylim(0, 100)
     plt.ylabel('Percent of accuracy')
     plt.grid(True)
     # create legend guide
     plt.legend(handles=list_handles)
-    plt.savefig('grid_search_svm_' + name_dataset + '.png')
+    plt.savefig('grid_search_svm_' + name_dataset + '_' + type_feature + '.png')
     # plt.show()
 
 
 def svm(dataset, c=1.0, max_it=1000):
     """
-
+    Run svm
     :param dataset: dataset to train and test
     :type dataset: tuple
     :param c:
@@ -236,8 +246,8 @@ def processing_data(X_train, X_test, type_feature, is_train=True):
 # Execute svm
 list_type_feature = list_feature
 if __name__ == '__main__':
-    res_compute_svm_file = open('svm_result.txt', 'w')
-    for name_datasets in list_datasets:
+    for name_datasets in list_datasets[1:]:
+        res_compute_svm_file = open('svm_result_' + name_datasets + '.txt', 'w')
         print('======= Loading data %s =======' % name_datasets)
         (X_train, y_train), (X_test, y_test) = loading_data(name_datasets)
         res_compute_svm_file.write('============== Datasets %s ==============\n' % name_datasets)
@@ -301,4 +311,4 @@ if __name__ == '__main__':
                                           str(best_hyper_params['loss'])))
             res_compute_svm_file.write(str(cnf_matrix))
             res_compute_svm_file.write('\n')
-    res_compute_svm_file.close()
+        res_compute_svm_file.close()

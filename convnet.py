@@ -1,5 +1,5 @@
 import numpy as np
-from keras.datasets import mnist
+from keras.datasets import mnist, cifar10
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import Convolution2D, MaxPooling2D
@@ -15,6 +15,24 @@ def preprocess_mnist():
     X_train = X_train.reshape(X_train.shape + (1,))
     X_test = X_test.reshape(X_test.shape + (1,))
     input_shape = (X_train.shape[1], X_train.shape[2], 1)
+
+    X_train = X_train.astype('float32')
+    X_test = X_test.astype('float32')
+    X_train /= 255
+    X_test /= 255
+
+    # convert class vectors to binary class matrices
+    Y_train = np_utils.to_categorical(y_train, nb_classes)
+    Y_test = np_utils.to_categorical(y_test, nb_classes)
+
+    return (X_train, Y_train), (X_test, Y_test), input_shape
+
+
+def preprocess_cifar10():
+    # the data, shuffled and split between train and test sets
+    (X_train, y_train), (X_test, y_test) = cifar10.load_data()
+
+    input_shape = (X_train.shape[1], X_train.shape[2], 3)  # RGB
 
     X_train = X_train.astype('float32')
     X_test = X_test.astype('float32')

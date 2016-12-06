@@ -79,22 +79,37 @@ nb_epoch = 6
 
 # number of convolutional filters to use
 nb_filters = 8  # TODO hyperparameter for gridsearch?
-# size of pooling area for max pooling
-pool_size = (2, 2)
-# convolution kernel size
-kernel_size = (3, 3)
 
 # Preprocess dataset
 (X_train, Y_train), (X_test, Y_test), input_shape = preprocess_mnist()
 
-# Build network
-model = build_network(nb_filters, kernel_size, input_shape, pool_size)
+# Grid search
+best_accu = 0
+best_params = None
 
-# Train
-model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
-          verbose=1, validation_split=1/7)
+list_nb_filters = [4, 8, 16, 32, 64]
+list_batch_size = [64, 128, 256, 512, 1024]
 
-# Test
-score = model.evaluate(X_test, Y_test, verbose=0)
-print(model.metrics_names[0], score[0])
-print(model.metrics_names[1], score[1])
+grid_search_results = np.zeros((len(list_nb_filters), len(list_batch_size)))
+
+for i, nb_filters in enumerate(list_nb_filters):
+    # Build network
+    model = build_network(nb_filters, kernel_size=(3, 3), input_shape=input_shape, pool_size=(2, 2))
+
+    for j, batch_size in enumerate(list_batch_size):
+        # Train
+        model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
+                  verbose=1, validation_split=1/7)
+
+        # Test
+        loss, accuracy = model.evaluate(X_test, Y_test, verbose=0)
+        print(model.metrics_names[0], loss)
+        print(model.metrics_names[1], accuracy)
+
+        grid_search_results[i, j] = accuracy
+
+        if accuracy > best_accu:
+            best_accu = accuracy
+            best_params = (nb_filters, batch_size)
+
+np.savetxt("gridsearch.csv", grid_search_results, delimiter="\t")

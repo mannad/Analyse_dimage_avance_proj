@@ -18,15 +18,14 @@ X_train_tot = vectorify(X_train_tot)
 X_test = vectorify(X_test)
 
 # Split training set into training and validation part
-X_valid = X_train_tot[int(0.7*training_length):training_length]
-X_train = X_train_tot[0:int(0.7*training_length)]
-
-y_valid = y_train_tot[int(0.7*training_length):training_length]
-y_train = y_train_tot[0:int(0.7*training_length)]
+X_train = X_train_tot[0:3000]
+y_train = y_train_tot[0:3000]
+X_valid = X_train_tot[3000:4000]
+y_valid = y_train_tot[3000:4000]
 
 # Grid search params
-gammaRange = [1, 5, 10, 15, 20]
-slackRange = [0.1, 0.25, 0.5, 1]
+gammaRange = [0.01]
+slackRange = [1]
 
 # f = open("KernelGridSearchResult.csv", 'w')
 # f.write(';')
@@ -42,18 +41,9 @@ for gamma_idx, g in enumerate(gammaRange):
     # f.write(str(g) + ';')
     for slack_idx, c in enumerate(slackRange):
         f = open("KernelSVM_Gamma_" + str(g) + "_Slack_" + str(c) + ".csv", 'w')
-        kernelClassifier = None
-        predictedYTrain = None
-        predictedYValid = None
-        trainingAccuracy = None
-        validAccuracy = None
-        diffTrain = None
-        diffValid = None
 
         print("Training : \n gamma :" + "%.5f" % g + " -|-  c :" + "%.2f" % c)
-        kernelClassifier = SVC()
-        kernelClassifier.C = c
-        kernelClassifier.gamma = g
+        kernelClassifier = SVC(kernel='poly', C=c, gamma=g)
         kernelClassifier.fit(X_train, y_train)
 
         print("Predicting on training")

@@ -119,4 +119,4 @@ for i, nb_filters in enumerate(list_nb_filters):
         with open("cumulative_results.txt", "a") as file:
             file.write("{:<3} {:<5} {:<.3f} {:<.3f}\n".format(nb_filters, batch_size, loss, accuracy))
 
-np.savetxt("gridsearch.csv", grid_search_results, delimiter="\t")
+        np.savetxt("gridsearch.csv", grid_search_results, delimiter="\t")

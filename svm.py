@@ -149,7 +149,7 @@ def compute_plot_grid_search(a_grid_search, name_dataset, type_feature, color_li
     # plt.show()
 
 
-def svm(dataset, c=1.0, max_it=1000):
+def svm(dataset, name_datasets, c=1.0, max_it=1000):
     """
     Run svm
     :param dataset: dataset to train and test
@@ -171,17 +171,23 @@ def svm(dataset, c=1.0, max_it=1000):
     results = {}
     for loss_type in list_loss:
         results[loss_type] = []
-        svm_lin_svc = LinearSVC(C=c, loss=loss_type, max_iter=max_it)
+        svm_lin_svc = LinearSVC(C=c, loss=loss_type, max_iter=max_it, random_state=1337)
 
         # Training
         svm_lin_svc.fit(X_train, y_train)
-        predicted_y = svm_lin_svc.predict(X_train)
-        diff = predicted_y - y_train
-        training_accuracy = 100 * (diff == 0).sum() / np.float(len(y_train))
+        if name_datasets == list_datasets[0]:
+            predicted_y = svm_lin_svc.predict(X_train)
+            diff = predicted_y - y_train
+            training_accuracy = 100 * (diff == 0).sum() / np.float(len(y_train))
+        else:
+            training_accuracy = svm_lin_svc.score(X_train, y_train)
         # Test
-        predicted_y = svm_lin_svc.predict(X_test)
-        diff = predicted_y - y_test
-        test_accuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
+        if name_datasets == list_datasets[0]:
+            predicted_y = svm_lin_svc.predict(X_test)
+            diff = predicted_y - y_test
+            test_accuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
+        else:
+            test_accuracy = svm_lin_svc.score(X_test, y_test) * 100
 
         results[loss_type].append({'C': c, 'train_accuracy': training_accuracy, 'test_accuracy': test_accuracy})
     return results
@@ -204,8 +210,8 @@ def processing_data(X_train, X_test, type_feature, is_train=True):
     if type_feature == list_feature[0]:
         X_train_described = X_train
         X_test_described = X_test
-        list_c = [0.0000001, 0.000001, 0.00001, 0.0001, 0.00025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2, 0.45,
-                  0.8, 1.0, 1.25, 1.5, 1.75, 2]
+        list_c = [0.0000001, 0.000001, 0.00001, 0.0001, 0.00025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5,
+                  0.75, 1.0]
     else:
         if is_train:
             file_bin = 'descr_' + type_feature + '_' + name_datasets + '_train.bin'
@@ -214,8 +220,8 @@ def processing_data(X_train, X_test, type_feature, is_train=True):
 
         if os.path.isfile(file_bin):
             print('Loading described data')
-            with open(file_bin, 'rb') as file:
-                (X_train_described, X_test_described) = pickle.load(file)
+            file = open(file_bin, 'rb')
+            (X_train_described, X_test_described) = pickle.load(file)
             file.close()
         else:
             print('Loading described data')
@@ -229,15 +235,15 @@ def processing_data(X_train, X_test, type_feature, is_train=True):
                 raise ValueError("Feature is not implemented: " + type_feature)
 
             print('Saving described data')
-            with open(file_bin, 'wb') as file:
-                pickle.dump((X_train_described, X_test_described), file, pickle.HIGHEST_PROTOCOL)
+            file = open(file_bin, 'wb')
+            pickle.dump((X_train_described, X_test_described), file, pickle.HIGHEST_PROTOCOL)
             file.close()
 
         if type_feature == list_feature[1]:  # bow
-            list_c = [0.0001, 0.00025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2, 0.45, 0.8, 1.0, 1.25, 1.5, 1.75,
-                      2, 2.5, 3, 4, 5]
+            list_c = [0.0001, 0.001, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2, 2.5,
+                      3, 4, 5]
         else:  # hog
-            list_c = [0.0001, 0.001, 0.01, 0.1, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10, 15, 20, 25]
+            list_c = [0.0001, 0.001, 0.01, 0.1, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 7, 10, 15, 20, 25]
     if is_train:
         return X_train_described, X_test_described, list_c
     else:
@@ -246,7 +252,7 @@ def processing_data(X_train, X_test, type_feature, is_train=True):
 # Execute svm
 list_type_feature = list_feature
 if __name__ == '__main__':
-    for name_datasets in list_datasets[1:]:
+    for name_datasets in list_datasets[1:2]:
         res_compute_svm_file = open('svm_result_' + name_datasets + '.txt', 'w')
         print('======= Loading data %s =======' % name_datasets)
         (X_train, y_train), (X_test, y_test) = loading_data(name_datasets)
@@ -268,10 +274,12 @@ if __name__ == '__main__':
             best_hyper_params = {'C': 0.0, 'accuracy': 0.0, 'loss': None}
             for idx_c, c in enumerate(list_c):
                 print('Training c=%s' % str(c))
-                res = svm(dataset=described_data, c=c)
-
+                res = svm(dataset=described_data, c=c, name_datasets=name_datasets)
                 for loss_type in list_loss:
                     res_grid[loss_type].append(res[loss_type][0])
+                    print('Accuracy loss %s -|-  train = %.3f  -|- test = %.3f' % (loss_type,
+                                                                                   res[loss_type][0]['train_accuracy'],
+                                                                                   res[loss_type][0]['test_accuracy']))
                     if (best_hyper_params['accuracy'] < res[loss_type][0]['test_accuracy']) \
                             and abs(res[loss_type][0]['train_accuracy'] - res[loss_type][0]['test_accuracy']) < 1.0:
                         best_hyper_params['C'] = c
@@ -292,17 +300,22 @@ if __name__ == '__main__':
                     line += str(r[list_val_name[1]] - r[list_val_name[2]]) + ';'
                     res_file.write(line + '\n')
                 res_file.write('\n')
+            res_file.close()
 
-            print('=== Test c=%s accuracy_training=%s loss=%s ===\n'
-                  % (str(best_hyper_params['C']), str(best_hyper_params['accuracy']), str(best_hyper_params['loss'])))
+            print('=== Test c=%s accuracy_training=%.3f loss=%s ===\n'
+                  % (str(best_hyper_params['C']), best_hyper_params['accuracy'], str(best_hyper_params['loss'])))
             X_train_described, X_test_described = processing_data(X_train, X_test, type_feature, False)
             X_train_described = flatten_dataset(X_train_described)
             X_test_described = flatten_dataset(X_test_described)
-            svm_lin_svc = LinearSVC(C=best_hyper_params['C'], loss=best_hyper_params['loss'])
+            svm_lin_svc = LinearSVC(C=best_hyper_params['C'], loss=best_hyper_params['loss'], random_state=1337)
             svm_lin_svc.fit(X_train_described, y_train)
+
             predicted_y = svm_lin_svc.predict(X_test_described)
-            diff = predicted_y - y_test
-            training_accuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
+            if name_datasets == list_datasets[0]:
+                diff = predicted_y - y_test
+                training_accuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
+            else:
+                test_accuracy = svm_lin_svc.score(X_test_described, y_test) * 100
 
             # Compute confusion matrix
             cnf_matrix = compute_confusion_matrix(y_test, predicted_y, name_datasets, type_feature)

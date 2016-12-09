@@ -1,8 +1,7 @@
 import os
 import itertools
-from keras.datasets import mnist, cifar10, cifar100
+from keras.datasets import mnist, cifar10
 from sklearn.svm import LinearSVC
-# from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import confusion_matrix
 import numpy as np
 import matplotlib.patches as mpatches
@@ -12,27 +11,13 @@ import pickle
 from utils import flatten_dataset
 from features import describe_dataset, describe_using_bow
 
-list_datasets = ['mnist', 'cifar10', 'cifar100']
+list_datasets = ['mnist', 'cifar10']
 list_loss = ['hinge', 'squared_hinge']
 list_feature = ['raw_pixel', 'bow', 'hog']
 color_plt = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
 list_class_label_tag = {list_datasets[0]: list(range(0, 10)),
                         list_datasets[1]: ['airplane', 'automobile', 'bird', 'cat', 'deer',
-                                           'dog', 'frog', 'horse', 'ship', 'truck'],
-                        list_datasets[2]: ['beaver', 'dolphin', 'otter', 'seal', 'whale', 'aquarium fish', 'flatfish',
-                                           'ray', 'shark', 'trout', 'orchids', 'poppies', 'roses', 'sunflowers',
-                                           'tulips', 'bottles','bowls', 'cans', 'cups', 'plates', 'apples', 'mushrooms',
-                                           'oranges', 'pears', 'sweet peppers', 'clock', 'computer keyboard', 'lamp',
-                                           'telephone', 'television', 'bed', 'chair', 'couch', 'table', 'wardrobe',
-                                           'bee', 'beetle', 'butterfly', 'caterpillar', 'cockroach', 'bear', 'leopard',
-                                           'lion', 'tiger', 'wolf', 'bridge', 'castle', 'house', 'road', 'skyscraper',
-                                           'cloud', 'forest', 'mountain', 'plain', 'sea', 'camel', 'cattle',
-                                           'chimpanzee', 'elephant', 'kangaroo', 'fox', 'porcupine', 'possum',
-                                           'raccoon', 'skunk', 'crab', 'lobster', 'snail', 'spider', 'worm', 'baby',
-                                           'boy', 'girl', 'man', 'woman', 'crocodile', 'dinosaur', 'lizard', 'snake',
-                                           'turtle', 'hamster', 'mouse', 'rabbit', 'shrew', 'squirrel', 'maple', 'oak',
-                                           'palm', 'pine', 'willow', 'bicycle', 'bus', 'motorcycle', 'pickup truck',
-                                           'train', 'lawn-mower', 'rocket', 'streetcar', 'tank', 'tractor']}
+                                           'dog', 'frog', 'horse', 'ship', 'truck']}
 
 
 def loading_data(name_dataset):
@@ -48,7 +33,7 @@ def loading_data(name_dataset):
     elif name_dataset == list_datasets[1]:
         return cifar10.load_data()
     else:
-        return cifar100.load_data()
+        raise ValueError('Not exists in list datasets %s' % name_datasets)
 
 
 def plot_confusion_matrix(cnf_matrix, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues):
@@ -243,7 +228,11 @@ def processing_data(X_train, X_test, type_feature, is_train=True):
             list_c = [0.0001, 0.001, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2, 2.5,
                       3, 4, 5]
         else:  # hog
-            list_c = [0.0001, 0.001, 0.01, 0.1, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 7, 10, 15, 20, 25]
+            if name_datasets == list_datasets[1]:  # cifar10
+                list_c = [0.0001, 0.001, 0.0025, 0.005, 0.0075, 0.01,  0.025, 0.05, 0.075, 0.1, 0.5, 0.75, 1, 1.25, 1.5,
+                          1.75, 2, 2.25, 2.5, 2.75, 3]
+            else:
+                list_c = [0.0001, 0.001, 0.01, 0.1, 0.5, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3]
     if is_train:
         return X_train_described, X_test_described, list_c
     else:
@@ -252,7 +241,7 @@ def processing_data(X_train, X_test, type_feature, is_train=True):
 # Execute svm
 list_type_feature = list_feature
 if __name__ == '__main__':
-    for name_datasets in list_datasets[1:2]:
+    for name_datasets in list_datasets[:2]:
         res_compute_svm_file = open('svm_result_' + name_datasets + '.txt', 'w')
         print('======= Loading data %s =======' % name_datasets)
         (X_train, y_train), (X_test, y_test) = loading_data(name_datasets)
@@ -302,26 +291,37 @@ if __name__ == '__main__':
                 res_file.write('\n')
             res_file.close()
 
-            print('=== Test c=%s accuracy_training=%.3f loss=%s ===\n'
+            print('=== Test c=%s -|- accuracy_cross_validation=%.3f -|- loss=%s ===\n'
                   % (str(best_hyper_params['C']), best_hyper_params['accuracy'], str(best_hyper_params['loss'])))
             X_train_described, X_test_described = processing_data(X_train, X_test, type_feature, False)
             X_train_described = flatten_dataset(X_train_described)
             X_test_described = flatten_dataset(X_test_described)
             svm_lin_svc = LinearSVC(C=best_hyper_params['C'], loss=best_hyper_params['loss'], random_state=1337)
+            # Training
             svm_lin_svc.fit(X_train_described, y_train)
-
+            if name_datasets == list_datasets[0]:
+                predicted_y = svm_lin_svc.predict(X_train_described)
+                diff = predicted_y - y_train
+                training_accuracy = 100 * (diff == 0).sum() / np.float(len(y_train))
+            else:
+                training_accuracy = svm_lin_svc.score(X_train_described, y_train) * 100
+            # Test
             predicted_y = svm_lin_svc.predict(X_test_described)
             if name_datasets == list_datasets[0]:
                 diff = predicted_y - y_test
-                training_accuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
+                test_accuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
             else:
                 test_accuracy = svm_lin_svc.score(X_test_described, y_test) * 100
 
             # Compute confusion matrix
             cnf_matrix = compute_confusion_matrix(y_test, predicted_y, name_datasets, type_feature)
-            res_compute_svm_file.write('c=%s;accuracy_training=%s;loss=%s\nmatrix_confusion\n'
+            print('c=%s;accuracy_cross_validation=%s;accuracy_training=%s;accuracy_test=%s;loss=%s\n'
+                  % (str(best_hyper_params['C']), str(best_hyper_params['accuracy']), str(training_accuracy),
+                     str(test_accuracy), str(best_hyper_params['loss'])))
+            res_compute_svm_file.write('c=%s;accuracy_cross_validation=%s;accuracy_training=%s;accuracy_test=%s;'
+                                       'loss=%s\nmatrix_confusion\n'
                                        % (str(best_hyper_params['C']), str(best_hyper_params['accuracy']),
-                                          str(best_hyper_params['loss'])))
+                                          str(training_accuracy), str(test_accuracy), str(best_hyper_params['loss'])))
             res_compute_svm_file.write(str(cnf_matrix))
             res_compute_svm_file.write('\n')
         res_compute_svm_file.close()

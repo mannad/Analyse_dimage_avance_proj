@@ -101,9 +101,6 @@ for i, nb_filters in enumerate(list_nb_filters):
     model = build_network(nb_filters, kernel_size=kernel_size, input_shape=input_shape, pool_size=pool_size)
 
     for j, batch_size in enumerate(list_batch_size):
-        if i < 4 and j < 5:
-            continue
-
         # Train
         model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
                   verbose=1, validation_split=1/7)

@@ -180,7 +180,7 @@ def svm(dataset, name_datasets, c=1.0, max_it=1000):
             diff = predicted_y - y_train
             training_accuracy = 100 * (diff == 0).sum() / np.float(len(y_train))
         else:
-            training_accuracy = svm_lin_svc.score(X_train, y_train)
+            training_accuracy = svm_lin_svc.score(X_train, y_train) * 100
         # Test
         if name_datasets == list_datasets[0]:
             predicted_y = svm_lin_svc.predict(X_test)

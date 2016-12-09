@@ -18,38 +18,36 @@ X_train_tot = vectorify(X_train_tot)
 X_test = vectorify(X_test)
 
 # Split training set into training and validation part
-X_train = X_train_tot[0:3000]
-y_train = y_train_tot[0:3000]
-X_valid = X_train_tot[3000:4000]
-y_valid = y_train_tot[3000:4000]
+X_train = X_train_tot[0:10000]
+y_train = y_train_tot[0:10000]
+X_valid = X_train_tot[10000:12000]
+y_valid = y_train_tot[10000:12000]
 
 # Grid search params
-gammaRange = [0.01]
-slackRange = [1]
+gammaRange = [0.0000001, 0.000001, 0.00001, 0.1, 0.5, 1]
+slackRange = [0.0000001, 0.000001, 0.00001, 0.1, 0.5, 1]
 
-# f = open("KernelGridSearchResult.csv", 'w')
-# f.write(';')
-# for slack_idx, c in enumerate(slackRange):
-#     f.write(str(c) + ';;')
-# f.write('\n')
+f = open("KernelGridSearchResult.csv", 'w')
+f.write(';')
+for slack_idx, c in enumerate(slackRange):
+    f.write(str(c) + ';' + str(c) + ';')
+f.write('\n')
 
 # grid search
 print('Started at : ' + str(datetime.datetime.now()))
 maxAccuracy = 0.0
 hypParams = [0.0, 0.0]
 for gamma_idx, g in enumerate(gammaRange):
-    # f.write(str(g) + ';')
+    f.write(str(g) + ';')
     for slack_idx, c in enumerate(slackRange):
-        f = open("KernelSVM_Gamma_" + str(g) + "_Slack_" + str(c) + ".csv", 'w')
-
-        print("Training : \n gamma :" + "%.5f" % g + " -|-  c :" + "%.2f" % c)
+        print("Training : \n gamma :" + str(g) + " -|-  c :" + str(c))
         kernelClassifier = SVC(kernel='poly', C=c, gamma=g)
         kernelClassifier.fit(X_train, y_train)
 
         print("Predicting on training")
         predictedYTrain = kernelClassifier.predict(X_train)
         diffTrain = predictedYTrain - y_train
-        trainingAccuracy = 100 * (diffTrain == 0).sum() / np.float(len(y_train))
+        trainingAccuracy = 100.0 * (diffTrain == 0).sum() / np.float(len(y_train))
         print('Training accuracy = ', trainingAccuracy, '%')
 
         print("Predicting on validation")
@@ -59,34 +57,33 @@ for gamma_idx, g in enumerate(gammaRange):
         print('Validation accuracy = ', validAccuracy, '%')
 
         f.write(str(trainingAccuracy) + ';' + str(validAccuracy) + ';')
-        f.close()
-        # if validAccuracy > maxAccuracy:
-        #     maxAccuracy = validAccuracy
-        #     hypParams[0] = g
-        #     hypParams[1] = c
-#     f.write('\n')
-# f.write('\n')
+        if validAccuracy > maxAccuracy:
+            maxAccuracy = validAccuracy
+            hypParams[0] = g
+            hypParams[1] = c
+    f.write('\n')
+f.write('\n')
 
-# # Kernel svm over entire training data set with optimized hyper params
-# print("Training with optimal hyper params : \n gamma :" + "%.2f" % hypParams[0] + " -|-  c :" + "%.2f" % hypParams[1])
-# kernelClassifier = SVC()
-# kernelClassifier.C = hypParams[0]
-# kernelClassifier.gamma = hypParams[1]
-# kernelClassifier.fit(X_train[0:len(X_train_tot)], y_train[0:len(X_train_tot)])
-#
-# print("Predicting on training")
-# predictedY = kernelClassifier.predict(X_train_tot)
-# diff = predictedY - y_train_tot
-# trainingAccuracy = 100 * (diff == 0).sum() / np.float(len(y_train_tot))
-# print('Training accuracy = ', trainingAccuracy, '%')
-#
-# print("Predicting on validation")
-# predictedY = kernelClassifier.predict(X_test)
-# diff = predictedY - y_test
-# testAccuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
-# print('Validation accuracy = ', testAccuracy, '%')
-#
-# f.write(str(trainingAccuracy) + ';' + str(testAccuracy) + ';')
-# f.close()
-# print('Ended at : ' + str(datetime.datetime.now()))
-#
+# Kernel svm over entire training data set with optimized hyper params
+print("Training with optimal hyper params : \n gamma :" + "%.2f" % hypParams[0] + " -|-  c :" + "%.2f" % hypParams[1])
+kernelClassifier = SVC()
+kernelClassifier.C = hypParams[0]
+kernelClassifier.gamma = hypParams[1]
+kernelClassifier.fit(X_train[0:len(X_train_tot)], y_train[0:len(X_train_tot)])
+
+print("Predicting on training")
+predictedY = kernelClassifier.predict(X_train_tot)
+diff = predictedY - y_train_tot
+trainingAccuracy = 100 * (diff == 0).sum() / np.float(len(y_train_tot))
+print('Training accuracy = ', trainingAccuracy, '%')
+
+print("Predicting on validation")
+predictedY = kernelClassifier.predict(X_test)
+diff = predictedY - y_test
+testAccuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
+print('Validation accuracy = ', testAccuracy, '%')
+
+f.write(str(trainingAccuracy) + ';' + str(testAccuracy) + ';')
+f.close()
+print('Ended at : ' + str(datetime.datetime.now()))
+

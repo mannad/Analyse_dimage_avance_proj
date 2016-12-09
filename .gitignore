@@ -2,4 +2,12 @@
 .idea/
 
 *.bin
+<<<<<<< HEAD
 ~$*.xlsx
+=======
+~$*.xlsx
+*.pyc
+
+gridsearch_accuracy_train.csv
+gridsearch_accuracy_test.csv
+>>>>>>> 749b605cd9c21c47e3a35e351ade40092edf331d

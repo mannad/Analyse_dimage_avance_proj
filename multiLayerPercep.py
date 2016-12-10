@@ -51,7 +51,7 @@ def build_network(layer_size, input_shape):
     # Build convolution network
     model = Sequential()
 
-    model.add(Dense(layer_size[0]))
+    model.add(Dense(layer_size[0], input_shape=input_shape))
     model.add(Activation('relu'))
     model.add(Dense(layer_size[1]))
     model.add(Activation('relu'))

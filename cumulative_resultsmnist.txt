@@ -1,0 +1,180 @@
+
+
+New grid search ==== Sat Dec 10 11:56:38 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:03:25 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:04:13 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:07:08 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:07:16 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:07:26 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:07:54 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:08:18 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:08:39 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:09:34 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:09:44 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:09:56 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:10:57 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:11:17 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:14:27 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:15:23 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:17:15 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:17:39 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:18:01 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:18:20 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:30:15 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:30:51 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:31:23 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:32:29 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:33:02 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:40:33 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:42:50 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:43:39 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:46:14 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:48:18 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:49:04 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:49:54 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:50:21 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:50:30 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:51:04 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:53:37 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:54:26 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:55:11 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:56:49 2016
+Nb. epochs: 10
+
+
+New grid search ==== Sat Dec 10 12:56:56 2016
+Nb. epochs: 10
+[64, 64, 64, 64]     8     0.1832 0.9672
+[64, 64, 64, 64]     16    0.1424 0.9679
+[64, 64, 64, 64]     32    0.1241 0.9710
+[64, 64, 64, 64]     64    0.1257 0.9678
+[64, 64, 64, 64]     128   0.1205 0.9676
+[128, 128, 128, 128] 8     0.1584 0.9754
+[128, 128, 128, 128] 16    0.1409 0.9742
+[128, 128, 128, 128] 32    0.1079 0.9766
+[128, 128, 128, 128] 64    0.0950 0.9772
+[128, 128, 128, 128] 128   0.0998 0.9749
+[64, 64, 128, 128]   8     0.1727 0.9687
+[64, 64, 128, 128]   16    0.1259 0.9707
+[64, 64, 128, 128]   32    0.1183 0.9713
+[64, 64, 128, 128]   64    0.1086 0.9715
+[64, 64, 128, 128]   128   0.1032 0.9708
+[64, 128, 64, 128]   8     0.1715 0.9722
+[64, 128, 64, 128]   16    0.1227 0.9719
+[64, 128, 64, 128]   32    0.1073 0.9726
+[64, 128, 64, 128]   64    0.1016 0.9712
+[64, 128, 64, 128]   128   0.1050 0.9700

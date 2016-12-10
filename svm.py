@@ -160,19 +160,9 @@ def svm(dataset, name_datasets, c=1.0, max_it=1000):
 
         # Training
         svm_lin_svc.fit(X_train, y_train)
-        if name_datasets == list_datasets[0]:
-            predicted_y = svm_lin_svc.predict(X_train)
-            diff = predicted_y - y_train
-            training_accuracy = 100 * (diff == 0).sum() / np.float(len(y_train))
-        else:
-            training_accuracy = svm_lin_svc.score(X_train, y_train) * 100
+        training_accuracy = svm_lin_svc.score(X_train, y_train) * 100
         # Test
-        if name_datasets == list_datasets[0]:
-            predicted_y = svm_lin_svc.predict(X_test)
-            diff = predicted_y - y_test
-            test_accuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
-        else:
-            test_accuracy = svm_lin_svc.score(X_test, y_test) * 100
+        test_accuracy = svm_lin_svc.score(X_test, y_test) * 100
 
         results[loss_type].append({'C': c, 'train_accuracy': training_accuracy, 'test_accuracy': test_accuracy})
     return results
@@ -307,11 +297,7 @@ if __name__ == '__main__':
                 training_accuracy = svm_lin_svc.score(X_train_described, y_train) * 100
             # Test
             predicted_y = svm_lin_svc.predict(X_test_described)
-            if name_datasets == list_datasets[0]:
-                diff = predicted_y - y_test
-                test_accuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
-            else:
-                test_accuracy = svm_lin_svc.score(X_test_described, y_test) * 100
+            test_accuracy = svm_lin_svc.score(X_test_described, y_test) * 100
 
             # Compute confusion matrix
             cnf_matrix = compute_confusion_matrix(y_test, predicted_y, name_datasets, type_feature)

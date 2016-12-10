@@ -7,3 +7,6 @@
 
 gridsearch_accuracy_train.csv
 gridsearch_accuracy_test.csv
+cumulative_results.txt
+gridsearch.csv
+start.hdf5

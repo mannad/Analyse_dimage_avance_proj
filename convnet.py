@@ -52,7 +52,8 @@ def build_network(nb_filters, kernel_size, input_shape, pool_size):
     # Build convolution network
     model = Sequential()
 
-    model.add(Convolution2D(nb_filters[0], kernel_size[0], kernel_size[1], border_mode='valid', input_shape=input_shape))
+    model.add(
+        Convolution2D(nb_filters[0], kernel_size[0], kernel_size[1], border_mode='valid', input_shape=input_shape))
     model.add(Activation('relu'))
     model.add(Convolution2D(nb_filters[1], kernel_size[0], kernel_size[1]))
     model.add(Activation('relu'))
@@ -79,7 +80,8 @@ def build_network(nb_filters, kernel_size, input_shape, pool_size):
 
     return model
 
-nb_epoch = 6
+
+nb_epoch = 10
 pool_size = (2, 2)
 kernel_size = (3, 3)
 
@@ -87,8 +89,8 @@ kernel_size = (3, 3)
 (X_train, Y_train), (X_test, Y_test), input_shape = preprocess_cifar10()
 
 # Grid search
-list_nb_filters = [[4, 8, 16, 32], [8, 16, 32, 64], [16, 32, 64, 128]]
-list_batch_size = [64, 128, 256, 512]
+list_nb_filters = [[4, 8, 16, 32], [8, 8, 16, 16], [8, 16, 32, 64], [16, 16, 32, 32], [16, 32, 64, 128], [32, 32, 64, 64]]
+list_batch_size = [8, 16, 32, 64, 128]
 
 grid_search_results = np.zeros((len(list_nb_filters), len(list_batch_size)))
 
@@ -99,13 +101,18 @@ with open("cumulative_results.txt", "a") as file:
 for i, nb_filters in enumerate(list_nb_filters):
     # Build network
     model = build_network(nb_filters, kernel_size=kernel_size, input_shape=input_shape, pool_size=pool_size)
+    model.summary()
+
+    model.save_weights("start.hdf5")
 
     for j, batch_size in enumerate(list_batch_size):
         print("Training with:", nb_filters, batch_size)
 
+        model.load_weights("start.hdf5")
+
         # Train
         model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
-                  verbose=1, validation_split=1/7)
+                  verbose=1, validation_split=1 / 7)
 
         # Test
         loss, accuracy = model.evaluate(X_test, Y_test, verbose=0)

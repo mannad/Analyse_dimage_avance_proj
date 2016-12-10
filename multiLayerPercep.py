@@ -4,6 +4,7 @@ from keras.datasets import mnist, cifar10
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.utils import np_utils
+import utils
 
 np.random.seed(1337)  # for reproducibility
 NB_CLASSES = 10
@@ -12,10 +13,9 @@ NB_CLASSES = 10
 def preprocess_mnist():
     # the data, shuffled and split between train and test sets
     (X_train, y_train), (X_test, y_test) = mnist.load_data()
-
-    X_train = X_train.reshape(X_train.shape + (1,))
-    X_test = X_test.reshape(X_test.shape + (1,))
-    input_shape = (X_train.shape[1], X_train.shape[2], 1)
+    X_train = utils.flatten_dataset(X_train)
+    X_test = utils.flatten_dataset(X_test)
+    input_dim = X_train.shape[1]
 
     X_train = X_train.astype('float32')
     X_test = X_test.astype('float32')
@@ -26,14 +26,16 @@ def preprocess_mnist():
     Y_train = np_utils.to_categorical(y_train, NB_CLASSES)
     Y_test = np_utils.to_categorical(y_test, NB_CLASSES)
 
-    return (X_train, Y_train), (X_test, Y_test), input_shape
+    return (X_train, Y_train), (X_test, Y_test), input_dim
 
 
 def preprocess_cifar10():
     # the data, shuffled and split between train and test sets
     (X_train, y_train), (X_test, y_test) = cifar10.load_data()
+    X_train = utils.flatten_dataset(X_train)
+    X_test = utils.flatten_dataset(X_test)
 
-    input_shape = (X_train.shape[1], X_train.shape[2], 3)  # RGB
+    input_dim = X_train.shape[1]
 
     X_train = X_train.astype('float32')
     X_test = X_test.astype('float32')
@@ -44,14 +46,13 @@ def preprocess_cifar10():
     Y_train = np_utils.to_categorical(y_train, NB_CLASSES)
     Y_test = np_utils.to_categorical(y_test, NB_CLASSES)
 
-    return (X_train, Y_train), (X_test, Y_test), input_shape
+    return (X_train, Y_train), (X_test, Y_test), input_dim
 
 
-def build_network(layer_size, input_shape):
+def build_network(layer_size, input_dim):
     # Build convolution network
     model = Sequential()
-
-    model.add(Dense(layer_size[0], input_shape=input_shape))
+    model.add(Dense(layer_size[0], input_dim=input_dim))
     model.add(Activation('relu'))
     model.add(Dense(layer_size[1]))
     model.add(Activation('relu'))
@@ -63,7 +64,7 @@ def build_network(layer_size, input_shape):
     model.add(Activation('relu'))
     model.add(Dropout(0.25))
 
-    model.add(Flatten())
+    # model.add(Flatten())
     model.add(Dense(128))
     model.add(Activation('relu'))
     model.add(Dropout(0.5))
@@ -80,7 +81,7 @@ def build_network(layer_size, input_shape):
 nb_epoch = 10
 
 # Preprocess dataset
-(X_train, Y_train), (X_test, Y_test), input_shape = preprocess_cifar10()
+(X_train, Y_train), (X_test, Y_test), input_dim = preprocess_mnist()
 
 # Grid search
 list_layer_size = [[64, 64, 64, 64], [128, 128, 128, 128], [64, 64, 128, 128], [64, 128, 64, 128]]
@@ -94,7 +95,7 @@ with open("cumulative_results.txt", "a") as file:
 
 for i, layer_size in enumerate(list_layer_size):
     # Build network
-    model = build_network(layer_size, input_shape=input_shape,)
+    model = build_network(layer_size, input_dim=input_dim, )
     model.summary()
 
     model.save_weights("start.hdf5")

@@ -3,7 +3,6 @@ import time
 from keras.datasets import mnist, cifar10
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
-from keras.layers import Convolution2D, MaxPooling2D
 from keras.utils import np_utils
 
 np.random.seed(1337)  # for reproducibility
@@ -48,23 +47,20 @@ def preprocess_cifar10():
     return (X_train, Y_train), (X_test, Y_test), input_shape
 
 
-def build_network(nb_filters, kernel_size, input_shape, pool_size):
+def build_network(layer_size, input_shape):
     # Build convolution network
     model = Sequential()
 
-    model.add(
-        Convolution2D(nb_filters[0], kernel_size[0], kernel_size[1], border_mode='valid', input_shape=input_shape))
+    model.add(Dense(layer_size[0]))
     model.add(Activation('relu'))
-    model.add(Convolution2D(nb_filters[1], kernel_size[0], kernel_size[1]))
+    model.add(Dense(layer_size[1]))
     model.add(Activation('relu'))
-    model.add(MaxPooling2D(pool_size=pool_size))
     model.add(Dropout(0.1))
 
-    model.add(Convolution2D(nb_filters[2], kernel_size[0], kernel_size[1]))
+    model.add(Dense(layer_size[2]))
     model.add(Activation('relu'))
-    model.add(Convolution2D(nb_filters[3], kernel_size[0], kernel_size[1]))
+    model.add(Dense(layer_size[3]))
     model.add(Activation('relu'))
-    model.add(MaxPooling2D(pool_size=pool_size))
     model.add(Dropout(0.25))
 
     model.add(Flatten())
@@ -82,31 +78,29 @@ def build_network(nb_filters, kernel_size, input_shape, pool_size):
 
 
 nb_epoch = 10
-pool_size = (2, 2)
-kernel_size = (3, 3)
 
 # Preprocess dataset
 (X_train, Y_train), (X_test, Y_test), input_shape = preprocess_cifar10()
 
 # Grid search
-list_nb_filters = [[4, 8, 16, 32], [8, 8, 16, 16], [8, 16, 32, 64], [16, 16, 32, 32], [16, 32, 64, 128], [32, 32, 64, 64]]
+list_layer_size = [[64, 64, 64, 64], [128, 128, 128, 128], [64, 64, 128, 128], [64, 128, 64, 128]]
 list_batch_size = [8, 16, 32, 64, 128]
 
-grid_search_results = np.zeros((len(list_nb_filters), len(list_batch_size)))
+grid_search_results = np.zeros((len(list_layer_size), len(list_batch_size)))
 
 with open("cumulative_results.txt", "a") as file:
     file.write("\n\nNew grid search ==== " + time.ctime() + "\n")
-    file.write("Nb. epochs: {}   Kernel size: {}   Pool size: {}\n".format(nb_epoch, kernel_size, pool_size))
+    file.write("Nb. epochs: {}\n".format(nb_epoch))
 
-for i, nb_filters in enumerate(list_nb_filters):
+for i, layer_size in enumerate(list_layer_size):
     # Build network
-    model = build_network(nb_filters, kernel_size=kernel_size, input_shape=input_shape, pool_size=pool_size)
+    model = build_network(layer_size, input_shape=input_shape,)
     model.summary()
 
     model.save_weights("start.hdf5")
 
     for j, batch_size in enumerate(list_batch_size):
-        print("Training with:", nb_filters, batch_size)
+        print("Training with:", layer_size, batch_size)
 
         model.load_weights("start.hdf5")
 
@@ -123,6 +117,6 @@ for i, nb_filters in enumerate(list_nb_filters):
         grid_search_results[i, j] = accuracy
 
         with open("cumulative_results.txt", "a") as file:
-            file.write("{:<20} {:<5} {:<.4f} {:<.4f}\n".format(str(nb_filters), batch_size, loss, accuracy))
+            file.write("{:<20} {:<5} {:<.4f} {:<.4f}\n".format(str(layer_size), batch_size, loss, accuracy))
 
         np.savetxt("gridsearch.csv", grid_search_results, delimiter="\t")

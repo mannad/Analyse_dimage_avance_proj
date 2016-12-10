@@ -81,7 +81,82 @@ def build_network(nb_filters, kernel_size, input_shape, pool_size):
     return model
 
 
-nb_epoch = 10
+def build_network2(input_shape):
+    # Build convolution network
+    model = Sequential()
+
+    model.add(
+        Convolution2D(32, 3, 3, border_mode='valid', input_shape=input_shape))
+    model.add(Activation('relu'))
+    model.add(Convolution2D(48, 3, 3))
+    model.add(Activation('relu'))
+    model.add(MaxPooling2D(pool_size=pool_size))
+    model.add(Dropout(0.25))
+
+    model.add(Convolution2D(64, 3, 3))
+    model.add(Activation('relu'))
+    model.add(Convolution2D(64, 3, 3))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.25))
+
+    model.add(Convolution2D(48, 3, 3))
+    model.add(Activation('relu'))
+    model.add(MaxPooling2D(pool_size=pool_size))  # TODO
+    model.add(Dropout(0.25))
+
+    model.add(Flatten())
+    model.add(Dense(128))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(NB_CLASSES))
+    model.add(Activation('softmax'))
+
+    model.compile(loss='categorical_crossentropy',
+                  optimizer='adadelta',
+                  metrics=['accuracy'])
+
+    return model
+
+
+def build_network3(input_shape):
+    # Build convolution network
+    model = Sequential()
+
+    model.add(
+        Convolution2D(32, 3, 3, border_mode='valid', input_shape=input_shape))
+    model.add(Activation('relu'))
+    model.add(Convolution2D(48, 3, 3))
+    model.add(Activation('relu'))
+    model.add(MaxPooling2D(pool_size=pool_size))
+    model.add(Dropout(0.25))
+
+    model.add(Convolution2D(64, 3, 3))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.25))
+
+    model.add(Convolution2D(48, 3, 3))
+    model.add(Activation('relu'))
+    model.add(MaxPooling2D(pool_size=pool_size))  # TODO
+    model.add(Dropout(0.25))
+
+    model.add(Flatten())
+    model.add(Dense(256))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(64))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(NB_CLASSES))
+    model.add(Activation('softmax'))
+
+    model.compile(loss='categorical_crossentropy',
+                  optimizer='adadelta',
+                  metrics=['accuracy'])
+
+    return model
+
+
+nb_epoch = 20
 pool_size = (2, 2)
 kernel_size = (3, 3)
 
@@ -89,8 +164,8 @@ kernel_size = (3, 3)
 (X_train, Y_train), (X_test, Y_test), input_shape = preprocess_cifar10()
 
 # Grid search
-list_nb_filters = [[4, 8, 16, 32], [8, 8, 16, 16], [8, 16, 32, 64], [16, 16, 32, 32], [16, 32, 64, 128], [32, 32, 64, 64]]
-list_batch_size = [8, 16, 32, 64, 128]
+list_nb_filters = [[32, 32, 64, 64]]
+list_batch_size = [16]
 
 grid_search_results = np.zeros((len(list_nb_filters), len(list_batch_size)))
 
@@ -100,7 +175,8 @@ with open("cumulative_results.txt", "a") as file:
 
 for i, nb_filters in enumerate(list_nb_filters):
     # Build network
-    model = build_network(nb_filters, kernel_size=kernel_size, input_shape=input_shape, pool_size=pool_size)
+    # model = build_network(nb_filters=nb_filters, kernel_size=kernel_size, input_shape=input_shape, pool_size=pool_size)
+    model = build_network2(input_shape=input_shape)
     model.summary()
 
     model.save_weights("start.hdf5")

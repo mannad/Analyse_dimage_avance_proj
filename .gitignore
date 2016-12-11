@@ -7,4 +7,6 @@
 
 *.txt
 *.csv
+
 start.hdf5
+cumulative_results.txt

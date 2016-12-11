@@ -260,7 +260,7 @@ if __name__ == '__main__':
             described_data = ((X_train_described, y_train_train), (X_test_described, y_train_valid))
 
             res_grid = {list_loss[0]: [], list_loss[1]: []}
-            best_hyper_params = {'C': 0.0, 'accuracy': 0.0, 'loss': None}
+            best_hyper_params = {'C': 0.0, 'accuracy': 0.0, 'loss': None, 'diff_acc_abs': 100}
             for idx_c, c in enumerate(list_c):
                 print('Training c=%s' % str(c))
                 res = svm(dataset=described_data, c=c, name_datasets=name_datasets)
@@ -269,11 +269,14 @@ if __name__ == '__main__':
                     print('Accuracy loss %s -|-  train = %.3f  -|- test = %.3f' % (loss_type,
                                                                                    res[loss_type][0]['train_accuracy'],
                                                                                    res[loss_type][0]['test_accuracy']))
-                    if (best_hyper_params['accuracy'] < res[loss_type][0]['test_accuracy']) \
-                            and abs(res[loss_type][0]['train_accuracy'] - res[loss_type][0]['test_accuracy']) < 1.0:
-                        best_hyper_params['C'] = c
-                        best_hyper_params['accuracy'] = res[loss_type][0]['test_accuracy']
-                        best_hyper_params['loss'] = loss_type
+                if best_hyper_params['accuracy'] < res[loss_type][0]['test_accuracy']\
+                        and abs(res[loss_type][0]['train_accuracy'] - res[loss_type][0]['test_accuracy']) \
+                                < best_hyper_params['diff_acc_abs']:
+                    best_hyper_params['C'] = c
+                    best_hyper_params['accuracy'] = res[loss_type][0]['test_accuracy']
+                    best_hyper_params['loss'] = loss_type
+                    best_hyper_params['diff_acc_abs'] = abs(res[loss_type][0]['train_accuracy']
+                                                            - res[loss_type][0]['test_accuracy']) + 0.5
 
             # put result in csv
             list_val_name = ['C', 'train_accuracy', 'test_accuracy']

@@ -20,7 +20,6 @@ def describe_dataset(data, feature='hog', params=None):
             b = hog_job(data, i, params)
             combined = np.hstack((a, b))
             result.append(combined)
-        # result = [np.hstack((downsample_job(data, i, f), hog_job(data, i, params))) for i in range(0, len(data))]
         return np.vstack(result)
     elif feature == 'hue_hog':
         # Linearized downsampled 4x4 image concatenated with hog
@@ -31,7 +30,6 @@ def describe_dataset(data, feature='hog', params=None):
             hogfeat = hog_job(data, i, params)
             combined = np.hstack((downs_hue, hogfeat))  # Keep only the hue
             result.append(combined)
-        # result = [np.hstack((downsample_job(data, i, f), hog_job(data, i, params))) for i in range(0, len(data))]
         return np.vstack(result)
     elif feature == 'hog-bow':
         described, centers = Bag_of_Words.create_bags_of_words(data, "hog", params, num_words=params['num_words'])

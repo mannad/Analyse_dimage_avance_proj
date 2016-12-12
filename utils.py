@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def flatten_dataset(a):
     """Flatten every sample in the dataset
     :param a: ndarray of shape (num_samples , d1 , d2 , ... , dN)

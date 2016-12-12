@@ -1,5 +1,6 @@
 import numpy as np
 import time
+from sklearn.metrics import confusion_matrix
 from keras.datasets import mnist, cifar10
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
@@ -27,7 +28,7 @@ def preprocess_mnist():
     Y_train = np_utils.to_categorical(y_train, NB_CLASSES)
     Y_test = np_utils.to_categorical(y_test, NB_CLASSES)
 
-    return (X_train, Y_train), (X_test, Y_test), input_shape
+    return (X_train, Y_train, y_train), (X_test, Y_test, y_test), input_shape
 
 
 def preprocess_cifar10():
@@ -45,7 +46,7 @@ def preprocess_cifar10():
     Y_train = np_utils.to_categorical(y_train, NB_CLASSES)
     Y_test = np_utils.to_categorical(y_test, NB_CLASSES)
 
-    return (X_train, Y_train), (X_test, Y_test), input_shape
+    return (X_train, Y_train, y_train), (X_test, Y_test, y_test), input_shape
 
 
 def build_network(nb_filters, kernel_size, input_shape, pool_size):
@@ -146,34 +147,34 @@ def build_network_adam(input_shape, num_dense_neurons):
     return model
 
 
-nb_epoch = 10
+nb_epoch = 6
 pool_size = (2, 2)
 kernel_size = (3, 3)
 
 # Preprocess dataset
-(X_train, Y_train), (X_test, Y_test), input_shape = preprocess_mnist()
+(X_train, Y_train, y_train), (X_test, Y_test, y_test), input_shape = preprocess_mnist()
 
 # Grid search
-# list_nb_filters = [[32, 32, 64, 64]]
-list_num_dense = [32, 64, 128, 256, 512]
-list_batch_size = [32, 128, 512]
+list_nb_filters = [[4, 4, 8, 8], [8, 8, 16, 16], [16, 16, 32, 32]]
+# list_num_dense = [32, 64, 128, 256, 512]
+list_batch_size = [16, 32, 64]
 
-grid_search_results = np.zeros((len(list_num_dense), len(list_batch_size)))
+grid_search_results = np.zeros((len(list_nb_filters), len(list_batch_size)))
 
 with open("cumulative_results.txt", "a") as file:
     file.write("\n\nNew grid search ==== " + time.ctime() + "\n")
     file.write("Nb. epochs: {}   Kernel size: {}   Pool size: {}\n".format(nb_epoch, kernel_size, pool_size))
 
-for i, num_dense in enumerate(list_num_dense):
+for i, nb_filters in enumerate(list_nb_filters):
     # Build network
-    # model = build_network(nb_filters=[32, 32, 64, 64], kernel_size=kernel_size, input_shape=input_shape, pool_size=pool_size)
-    model = build_network_adam(input_shape=input_shape, num_dense_neurons=num_dense)
+    model = build_network(nb_filters=nb_filters, kernel_size=kernel_size, input_shape=input_shape, pool_size=pool_size)
+    # model = build_network_adam(input_shape=input_shape, num_dense_neurons=num_dense)
     model.summary()
 
     model.save_weights("start.hdf5")
 
     for j, batch_size in enumerate(list_batch_size):
-        print("Training with:", num_dense, batch_size)
+        print("Training with:", nb_filters, batch_size)
 
         model.load_weights("start.hdf5")
 
@@ -181,15 +182,21 @@ for i, num_dense in enumerate(list_num_dense):
         model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
                   verbose=1, validation_split=1 / 7)
 
-        # Test
-        loss, accuracy = model.evaluate(X_test, Y_test, verbose=0)
+        # Evaluate train
+        trloss, trainAccuracy = model.evaluate(X_train, Y_train)
 
-        print(model.metrics_names[0], loss)
-        print(model.metrics_names[1], accuracy)
+        # Evaluate test
+        teloss, testAccuracy = model.evaluate(X_test, Y_test, verbose=0)
 
-        grid_search_results[i, j] = accuracy
+        # Predict
+        predicted = model.predict_classes(X_test)
+        conf_mat = confusion_matrix(y_test, predicted)
+        np.savetxt("confusion_{}_{}.csv".format(i, j), conf_mat, delimiter='\t')
+
+        grid_search_results[i, j] = testAccuracy
 
         with open("cumulative_results.txt", "a") as file:
-            file.write("{:<4} {:<5} {:<.4f} {:<.4f}\n".format(num_dense, batch_size, loss, accuracy))
+            file.write(
+                "{:<20} {:<5} {:<.4f} {:<.4f}\n".format(str(nb_filters), batch_size, trainAccuracy, testAccuracy))
 
         np.savetxt("gridsearch.csv", grid_search_results, delimiter="\t")

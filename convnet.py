@@ -81,108 +81,99 @@ def build_network(nb_filters, kernel_size, input_shape, pool_size):
     return model
 
 
-def build_network2(input_shape):
+def build_network2(input_shape, num_dense_neurons):
     # Build convolution network
     model = Sequential()
 
-    model.add(
-        Convolution2D(32, 3, 3, border_mode='valid', input_shape=input_shape))
+    model.add(Convolution2D(32, 3, 3, border_mode='valid', input_shape=input_shape))
     model.add(Activation('relu'))
     model.add(Convolution2D(48, 3, 3))
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=pool_size))
-    model.add(Dropout(0.25))
+    model.add(Dropout(0.5))
 
     model.add(Convolution2D(64, 3, 3))
     model.add(Activation('relu'))
     model.add(Convolution2D(64, 3, 3))
     model.add(Activation('relu'))
-    model.add(Dropout(0.25))
+    model.add(Dropout(0.5))
 
     model.add(Convolution2D(48, 3, 3))
     model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=pool_size))  # TODO
-    model.add(Dropout(0.25))
+    model.add(Dropout(0.5))
 
     model.add(Flatten())
-    model.add(Dense(128))
+    model.add(Dense(num_dense_neurons))
     model.add(Activation('relu'))
     model.add(Dropout(0.5))
     model.add(Dense(NB_CLASSES))
     model.add(Activation('softmax'))
 
     model.compile(loss='categorical_crossentropy',
-                  optimizer='adadelta',
+                  optimizer='adam',
                   metrics=['accuracy'])
 
     return model
 
 
-def build_network3(input_shape):
+def build_network_adam(input_shape, num_dense_neurons):
     # Build convolution network
     model = Sequential()
 
-    model.add(
-        Convolution2D(32, 3, 3, border_mode='valid', input_shape=input_shape))
-    model.add(Activation('relu'))
-    model.add(Convolution2D(48, 3, 3))
-    model.add(Activation('relu'))
-    model.add(MaxPooling2D(pool_size=pool_size))
-    model.add(Dropout(0.25))
-
-    model.add(Convolution2D(64, 3, 3))
-    model.add(Activation('relu'))
-    model.add(Dropout(0.25))
-
-    model.add(Convolution2D(48, 3, 3))
-    model.add(Activation('relu'))
-    model.add(MaxPooling2D(pool_size=pool_size))  # TODO
-    model.add(Dropout(0.25))
-
-    model.add(Flatten())
-    model.add(Dense(256))
+    model.add(Convolution2D(64, 3, 3, border_mode='valid', input_shape=input_shape))
     model.add(Activation('relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(64))
+    model.add(Convolution2D(64, 3, 3))
+    model.add(Activation('relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+
+    model.add(Convolution2D(128, 3, 3))
+    model.add(Activation('relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+
+    model.add(Flatten())
+    model.add(Dense(num_dense_neurons))
     model.add(Activation('relu'))
     model.add(Dropout(0.5))
     model.add(Dense(NB_CLASSES))
     model.add(Activation('softmax'))
 
     model.compile(loss='categorical_crossentropy',
-                  optimizer='adadelta',
+                  optimizer='adam',
                   metrics=['accuracy'])
 
     return model
 
 
-nb_epoch = 20
+nb_epoch = 10
 pool_size = (2, 2)
 kernel_size = (3, 3)
 
 # Preprocess dataset
-(X_train, Y_train), (X_test, Y_test), input_shape = preprocess_cifar10()
+(X_train, Y_train), (X_test, Y_test), input_shape = preprocess_mnist()
 
 # Grid search
-list_nb_filters = [[32, 32, 64, 64]]
-list_batch_size = [16]
+# list_nb_filters = [[32, 32, 64, 64]]
+list_num_dense = [32, 64, 128, 256, 512]
+list_batch_size = [32, 128, 512]
 
-grid_search_results = np.zeros((len(list_nb_filters), len(list_batch_size)))
+grid_search_results = np.zeros((len(list_num_dense), len(list_batch_size)))
 
 with open("cumulative_results.txt", "a") as file:
     file.write("\n\nNew grid search ==== " + time.ctime() + "\n")
     file.write("Nb. epochs: {}   Kernel size: {}   Pool size: {}\n".format(nb_epoch, kernel_size, pool_size))
 
-for i, nb_filters in enumerate(list_nb_filters):
+for i, num_dense in enumerate(list_num_dense):
     # Build network
-    # model = build_network(nb_filters=nb_filters, kernel_size=kernel_size, input_shape=input_shape, pool_size=pool_size)
-    model = build_network2(input_shape=input_shape)
+    # model = build_network(nb_filters=[32, 32, 64, 64], kernel_size=kernel_size, input_shape=input_shape, pool_size=pool_size)
+    model = build_network_adam(input_shape=input_shape, num_dense_neurons=num_dense)
     model.summary()
 
     model.save_weights("start.hdf5")
 
     for j, batch_size in enumerate(list_batch_size):
-        print("Training with:", nb_filters, batch_size)
+        print("Training with:", num_dense, batch_size)
 
         model.load_weights("start.hdf5")
 
@@ -199,6 +190,6 @@ for i, nb_filters in enumerate(list_nb_filters):
         grid_search_results[i, j] = accuracy
 
         with open("cumulative_results.txt", "a") as file:
-            file.write("{:<20} {:<5} {:<.4f} {:<.4f}\n".format(str(nb_filters), batch_size, loss, accuracy))
+            file.write("{:<4} {:<5} {:<.4f} {:<.4f}\n".format(num_dense, batch_size, loss, accuracy))
 
         np.savetxt("gridsearch.csv", grid_search_results, delimiter="\t")

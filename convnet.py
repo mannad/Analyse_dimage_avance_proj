@@ -7,7 +7,7 @@ from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import Convolution2D, MaxPooling2D
 from keras.utils import np_utils
 
-np.random.seed(1337)  # for reproducibility
+np.random.seed(1336)  # for reproducibility
 NB_CLASSES = 10
 
 
@@ -147,34 +147,34 @@ def build_network_adam(input_shape, num_dense_neurons):
     return model
 
 
-nb_epoch = 6
+nb_epoch = 10
 pool_size = (2, 2)
 kernel_size = (3, 3)
 
 # Preprocess dataset
-(X_train, Y_train, y_train), (X_test, Y_test, y_test), input_shape = preprocess_mnist()
+(X_train, Y_train, y_train), (X_test, Y_test, y_test), input_shape = preprocess_cifar10()
 
 # Grid search
-list_nb_filters = [[4, 4, 8, 8], [8, 8, 16, 16], [16, 16, 32, 32]]
-# list_num_dense = [32, 64, 128, 256, 512]
-list_batch_size = [16, 32, 64]
+# list_nb_filters = [[4, 4, 8, 8], [8, 8, 16, 16], [16, 16, 32, 32]]
+list_num_dense = [512]
+list_batch_size = [32]
 
-grid_search_results = np.zeros((len(list_nb_filters), len(list_batch_size)))
+grid_search_results = np.zeros((len(list_num_dense), len(list_batch_size)))
 
 with open("cumulative_results.txt", "a") as file:
     file.write("\n\nNew grid search ==== " + time.ctime() + "\n")
     file.write("Nb. epochs: {}   Kernel size: {}   Pool size: {}\n".format(nb_epoch, kernel_size, pool_size))
 
-for i, nb_filters in enumerate(list_nb_filters):
+for i, num_dense in enumerate(list_num_dense):
     # Build network
-    model = build_network(nb_filters=nb_filters, kernel_size=kernel_size, input_shape=input_shape, pool_size=pool_size)
-    # model = build_network_adam(input_shape=input_shape, num_dense_neurons=num_dense)
+    # model = build_network(nb_filters=nb_filters, kernel_size=kernel_size, input_shape=input_shape, pool_size=pool_size)
+    model = build_network_adam(input_shape=input_shape, num_dense_neurons=num_dense)
     model.summary()
 
     model.save_weights("start.hdf5")
 
     for j, batch_size in enumerate(list_batch_size):
-        print("Training with:", nb_filters, batch_size)
+        print("Training with:", num_dense, batch_size)
 
         model.load_weights("start.hdf5")
 
@@ -197,6 +197,6 @@ for i, nb_filters in enumerate(list_nb_filters):
 
         with open("cumulative_results.txt", "a") as file:
             file.write(
-                "{:<20} {:<5} {:<.4f} {:<.4f}\n".format(str(nb_filters), batch_size, trainAccuracy, testAccuracy))
+                "{:<4} {:<5} {:<.4f} {:<.4f}\n".format(num_dense, batch_size, trainAccuracy, testAccuracy))
 
         np.savetxt("gridsearch.csv", grid_search_results, delimiter="\t")

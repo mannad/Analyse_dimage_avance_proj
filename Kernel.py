@@ -1,89 +1,121 @@
-from keras.datasets import mnist
+from keras.datasets import mnist, cifar10
 from sklearn.svm import SVC
+from features import describe_dataset
 import numpy as np
+import pickle
 import datetime
 
-
-def vectorify(a):
-    X_shape = a.shape
-    return np.reshape(a, (X_shape[0], X_shape[1] * X_shape[2]))
+database = "Cifar10"
+feature = "Bow"
+gridSearch = False
 
 np.random.seed(159753)
 
 print("Loading data")
-(X_train_tot, y_train_tot), (X_test, y_test) = mnist.load_data()
-training_length = len(X_train_tot)
+if database == "Mnist":
+    (X_train_tot, y_train_tot), (X_test, y_test) = mnist.load_data()
+    training_length = len(X_train_tot)
+    hypParams = [10, 100]
+else:
+    (X_train_tot, y_train_tot), (X_test, y_test) = cifar10.load_data()
+    training_length = len(X_train_tot)
+    hypParams = [1, 1]
 
-X_train_tot = vectorify(X_train_tot)
-X_test = vectorify(X_test)
+if feature == "Raw":
+    X_train_tot = describe_dataset(X_train_tot, 'raw')
+    X_test = describe_dataset(X_test, 'raw')
+elif feature == "Gray":
+    X_train_tot = describe_dataset(X_train_tot, 'gray')
+    X_test = describe_dataset(X_test, 'gray')
+elif feature == "Hog":
+    X_train_tot = describe_dataset(X_train_tot, 'hog')
+    X_test = describe_dataset(X_test, 'hog')
+elif feature == "DownHog":
+    X_train_tot = describe_dataset(X_train_tot, 'downs_hog',
+                                   params={'blocks_per_dim': 4, 'orientations': 6, 'downsample_factor': 8})
+    X_test = describe_dataset(X_test, 'downs_hog',
+                              params={'blocks_per_dim': 4, 'orientations': 6, 'downsample_factor': 8})
+else:
+    file = open('descr_bow_cifar10.bin', 'rb')
+    (X_train_tot, X_test) = pickle.load(file)
+    file.close()
 
-# Split training set into training and validation part
-X_train = X_train_tot[0:10000]
-y_train = y_train_tot[0:10000]
-X_valid = X_train_tot[10000:12000]
-y_valid = y_train_tot[10000:12000]
+print(database + " " + feature)
 
-# Grid search params
-gammaRange = [0.0000001, 0.000001, 0.00001, 0.1, 0.5, 1]
-slackRange = [0.0000001, 0.000001, 0.00001, 0.1, 0.5, 1]
+if gridSearch:
+    # Split training set into training and validation part
+    X_train = X_train_tot[0:2000]
+    y_train = y_train_tot[0:2000]
+    X_valid = X_train_tot[2000:2500]
+    y_valid = y_train_tot[2000:2500]
 
-f = open("KernelGridSearchResult.csv", 'w')
-f.write(';')
-for slack_idx, c in enumerate(slackRange):
-    f.write(str(c) + ';' + str(c) + ';')
-f.write('\n')
+    # Grid search params
+    gammaRange = [0.0000001, 0.1, 1, 10, 100]
+    slackRange = [0.0000001, 0.1, 1, 10]
 
-# grid search
-print('Started at : ' + str(datetime.datetime.now()))
-maxAccuracy = 0.0
-hypParams = [0.0, 0.0]
-for gamma_idx, g in enumerate(gammaRange):
-    f.write(str(g) + ';')
-    for slack_idx, c in enumerate(slackRange):
-        print("Training : \n gamma :" + str(g) + " -|-  c :" + str(c))
-        kernelClassifier = SVC(kernel='poly', C=c, gamma=g)
-        kernelClassifier.fit(X_train, y_train)
+    ft = open(database + "_Kernel_" + feature + "_Training.csv", 'w')
+    ft.write(';')
+    for c in slackRange:
+        ft.write(str(c) + ';')
+    ft.write('\n')
 
-        print("Predicting on training")
-        predictedYTrain = kernelClassifier.predict(X_train)
-        diffTrain = predictedYTrain - y_train
-        trainingAccuracy = 100.0 * (diffTrain == 0).sum() / np.float(len(y_train))
-        print('Training accuracy = ', trainingAccuracy, '%')
+    fv = open(database + "_Kernel_" + feature + "_VAlidation.csv", 'w')
+    fv.write(';')
+    for c in slackRange:
+        fv.write(str(c) + ';')
+    fv.write('\n')
 
-        print("Predicting on validation")
-        predictedYValid = kernelClassifier.predict(X_valid)
-        diffValid = predictedYValid - y_valid
-        validAccuracy = 100 * (diffValid == 0).sum() / np.float(len(y_valid))
-        print('Validation accuracy = ', validAccuracy, '%')
+    # grid search
+    print('Started at : ' + str(datetime.datetime.now()))
+    for gamma_idx, g in enumerate(gammaRange):
+        ft.write(str(g) + ';')
+        fv.write(str(g) + ';')
+        for slack_idx, c in enumerate(slackRange):
+            print("Training : \n gamma :" + str(g) + " -|-  c :" + str(c))
+            kernelClassifier = SVC(kernel='poly', C=c, gamma=g)
+            kernelClassifier.fit(X_train, y_train)
 
-        f.write(str(trainingAccuracy) + ';' + str(validAccuracy) + ';')
-        if validAccuracy > maxAccuracy:
-            maxAccuracy = validAccuracy
-            hypParams[0] = g
-            hypParams[1] = c
-    f.write('\n')
-f.write('\n')
+            print("Predicting on training")
+            trainingAccuracy = kernelClassifier.score(X_train, y_train)*100
+            print('Training accuracy = ', trainingAccuracy, '%')
 
-# Kernel svm over entire training data set with optimized hyper params
-print("Training with optimal hyper params : \n gamma :" + "%.2f" % hypParams[0] + " -|-  c :" + "%.2f" % hypParams[1])
-kernelClassifier = SVC()
-kernelClassifier.C = hypParams[0]
-kernelClassifier.gamma = hypParams[1]
-kernelClassifier.fit(X_train[0:len(X_train_tot)], y_train[0:len(X_train_tot)])
+            print("Predicting on validation")
+            validAccuracy = kernelClassifier.score(X_valid, y_valid)*100
+            print('Validation accuracy = ', validAccuracy, '%')
 
-print("Predicting on training")
-predictedY = kernelClassifier.predict(X_train_tot)
-diff = predictedY - y_train_tot
-trainingAccuracy = 100 * (diff == 0).sum() / np.float(len(y_train_tot))
-print('Training accuracy = ', trainingAccuracy, '%')
+            ft.write(str(trainingAccuracy) + ';')
+            fv.write(str(validAccuracy) + ';')
+        ft.write('\n')
+        fv.write('\n')
+    ft.write('\n')
+    fv.write('\n')
+    print('Ended at : ' + str(datetime.datetime.now()))
+else:
+    # Kernel svm over entire training data set with optimized hyper params
+    print("Training with optimal hyper params : \n gamma :" + "%.2f" % hypParams[0] + " -|-  c :" + "%.2f" % hypParams[1])
+    kernelClassifier = SVC(kernel='poly', C=hypParams[0], gamma=hypParams[1])
+    kernelClassifier.fit(X_train_tot, y_train_tot)
 
-print("Predicting on validation")
-predictedY = kernelClassifier.predict(X_test)
-diff = predictedY - y_test
-testAccuracy = 100 * (diff == 0).sum() / np.float(len(y_test))
-print('Validation accuracy = ', testAccuracy, '%')
+    print("Predicting on training")
+    trainingAccuracy = kernelClassifier.score(X_train_tot, y_train_tot)*100
+    print('Training accuracy = ', trainingAccuracy, '%')
 
-f.write(str(trainingAccuracy) + ';' + str(testAccuracy) + ';')
-f.close()
-print('Ended at : ' + str(datetime.datetime.now()))
+    print("Predicting on validation")
+    validAccuracy = kernelClassifier.score(X_test, y_test)*100
+    predictedY = kernelClassifier.predict(X_test)
+    print('Validation accuracy = ', validAccuracy, '%')
 
+    f = open(database + "_Kernel_" + feature + "_Result.txt", 'w')
+    f.write('training : ' + str('None') + '\nTest : ' + str(validAccuracy) + '\n')
+    f.close()
+
+    try:
+        print('Compute confusion matrix')
+        cnf = np.zeros([10, 10])
+        for i, pred in enumerate(predictedY):
+            predicted_class = np.argmax(pred)
+            real_class = np.argmax(y_test[i])
+            cnf[real_class][predicted_class] += 1
+        np.savetxt("confusion_matrix" + database + feature + ".csv", cnf)
+    except:
+        print('Error Matrix')
